@@ -349,7 +349,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2648017470645738248}
   - component: {fileID: 6129395791916550660}
-  - component: {fileID: 8150672649588515719}
+  - component: {fileID: 5920177896066487522}
   - component: {fileID: 7751183376847666858}
   m_Layer: 0
   m_Name: P_Worker
@@ -391,7 +391,7 @@ MonoBehaviour:
   stackStep: 0.28
   itemScale: {x: 0.42, y: 0.24, z: 0.42}
   settleSpeed: 14
---- !u!114 &8150672649588515719
+--- !u!114 &5920177896066487522
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

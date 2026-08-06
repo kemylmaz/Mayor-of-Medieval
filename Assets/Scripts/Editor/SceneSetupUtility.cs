@@ -871,6 +871,60 @@ namespace MayorOfMedieval.EditorUtils
             ScatterFreely(nodes.transform, prefabs.Tree, 28, 17f, 27f);
             ScatterFreely(nodes.transform, prefabs.Rock, 24, 17f, 27f);
             ScatterFreely(nodes.transform, prefabs.Animal, 14, 18f, 26f);
+
+            // A small grove and outcrop right beside the village. Two jobs: the opening
+            // frame is not an empty field, and the very first "chop 5 wood" task is a few
+            // steps away instead of a trek out to the far ring.
+            PlaceStarterCluster(nodes.transform, prefabs.Tree, new Vector3(-5.5f, 0f, -1.5f), 3.4f, 5);
+            // Spread wider and one fewer, otherwise the boulders read as a single grey wall.
+            PlaceStarterCluster(nodes.transform, prefabs.Rock, new Vector3(5f, 0f, -3f), 4.2f, 3);
+
+            SetupSpawnDressing(root);
+        }
+
+        private static void PlaceStarterCluster(Transform parent, GameObject prefab, Vector3 centre, float radius, int count)
+        {
+            if (prefab == null) return;
+            for (int i = 0; i < count; i++)
+            {
+                float angle = (i / (float)count) * Mathf.PI * 2f + Random.Range(-0.3f, 0.3f);
+                float r = Random.Range(radius * 0.45f, radius);
+                GameObject go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+                go.transform.position = centre + new Vector3(Mathf.Cos(angle) * r, 0f, Mathf.Sin(angle) * r);
+                go.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+                float s = Random.Range(0.9f, 1.2f);
+                go.transform.localScale = new Vector3(s, s, s);
+            }
+        }
+
+        /// <summary>
+        /// Non-interactive props around the spawn so the first thing the player sees reads
+        /// as a lived-in village rather than a blank lawn.
+        /// </summary>
+        private static void SetupSpawnDressing(Transform root)
+        {
+            GameObject dressing = new GameObject("SpawnDressing");
+            dressing.transform.SetParent(root, false);
+            Transform t = dressing.transform;
+
+            // A short path leading from the spawn down to the Market.
+            for (int i = 0; i < 6; i++) Piece("FantasyTown/road", t, new Vector3(0f, 0f, -i));
+
+            Piece("FantasyTown/fence", t, new Vector3(-2.5f, 0f, 1.5f), 0f);
+            Piece("FantasyTown/fence", t, new Vector3(-2.5f, 0f, 2.5f), 0f);
+            Piece("FantasyTown/fence-gate", t, new Vector3(-2.5f, 0f, 3.5f), 0f);
+            // Hedges were dropped here: at this camera distance the kit's thin hedge pieces
+            // read as floating pipes rather than greenery. Extra trees fill the space better.
+            Piece("FantasyTown/tree-crooked", t, new Vector3(4.6f, 0f, 3.2f), 40f);
+            Piece("FantasyTown/tree", t, new Vector3(6.2f, 0f, 1.8f), 150f);
+
+            Piece("FantasyTown/lantern", t, new Vector3(1.4f, 0f, -1.2f));
+            Piece("FantasyTown/lantern", t, new Vector3(-1.4f, 0f, -4.2f));
+            Piece("FantasyTown/cart", t, new Vector3(2.8f, 0f, -3.4f), 25f);
+            Piece("FantasyTown/banner-green", t, new Vector3(-1.6f, 0f, -0.5f), 90f);
+            Piece("MiniForest/tent", t, new Vector3(-4.2f, 0f, 2.8f), 200f);
+            Piece("MiniForest/plant", t, new Vector3(1.9f, 0f, 0.6f));
+            Piece("MiniForest/plant", t, new Vector3(-2.0f, 0f, -2.6f));
         }
 
         private static void ScatterFreely(Transform parent, GameObject prefab, int count, float minRadius, float maxRadius)
@@ -1026,14 +1080,17 @@ namespace MayorOfMedieval.EditorUtils
             canvasGo.AddComponent<GraphicRaycaster>();
 
             GameObject goldPanel = UIImage(canvasGo.transform, "GoldPanel",
-                new Vector2(1f, 1f), new Vector2(-30f, -30f), new Vector2(260f, 90f), new Color(0.12f, 0.12f, 0.14f, 0.85f));
-            UIImage(goldPanel.transform, "Icon", new Vector2(0f, 0.5f), new Vector2(58f, 0f), new Vector2(56f, 56f),
-                new Color(0.35f, 0.78f, 0.35f));
-            TMP_Text goldText = UIText(goldPanel.transform, "GoldText", new Vector2(0.5f, 0.5f), new Vector2(28f, 0f),
-                new Vector2(150f, 70f), "100", 46f, TextAlignmentOptions.Right);
+                new Vector2(1f, 1f), new Vector2(-30f, -30f), new Vector2(280f, 96f), Color.white);
+            Skin(goldPanel, "panel_brown", Color.white);
+
+            UIImage(goldPanel.transform, "Icon", new Vector2(0f, 0.5f), new Vector2(60f, 0f), new Vector2(52f, 52f),
+                GameConfig.ColorOf(ResourceType.Gold));
+            TMP_Text goldText = UIText(goldPanel.transform, "GoldText", new Vector2(0.5f, 0.5f), new Vector2(30f, 0f),
+                new Vector2(160f, 70f), "100", 46f, TextAlignmentOptions.Right);
 
             GameObject questPanel = UIImage(canvasGo.transform, "QuestPanel",
-                new Vector2(0.5f, 1f), new Vector2(0f, -34f), new Vector2(560f, 62f), new Color(0.12f, 0.12f, 0.14f, 0.85f));
+                new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(600f, 74f), Color.white);
+            Skin(questPanel, "panel_brown_dark", Color.white);
 
             GameObject barGo = new GameObject("ProgressBar", typeof(RectTransform));
             barGo.transform.SetParent(questPanel.transform, false);
@@ -1050,16 +1107,22 @@ namespace MayorOfMedieval.EditorUtils
             slider.value = 0f;
 
             GameObject bg = UIImage(barGo.transform, "Background", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 34f),
-                new Color(0.25f, 0.25f, 0.28f, 1f));
+                Color.white);
             StretchFull((RectTransform)bg.transform);
+            Skin(bg, "progress_green_border", Color.white);
 
             GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
             fillArea.transform.SetParent(barGo.transform, false);
-            StretchFull((RectTransform)fillArea.transform);
+            RectTransform fillAreaRect = (RectTransform)fillArea.transform;
+            StretchFull(fillAreaRect);
+            // Inset so the fill sits inside the frame rather than covering its edge.
+            fillAreaRect.offsetMin = new Vector2(6f, 6f);
+            fillAreaRect.offsetMax = new Vector2(-6f, -6f);
 
             GameObject fill = UIImage(fillArea.transform, "Fill", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 34f),
-                new Color(0.35f, 0.82f, 0.40f));
+                Color.white);
             StretchFull((RectTransform)fill.transform);
+            Skin(fill, "progress_green", Color.white);
 
             slider.fillRect = (RectTransform)fill.transform;
             slider.targetGraphic = fill.GetComponent<Image>();
@@ -1070,14 +1133,18 @@ namespace MayorOfMedieval.EditorUtils
             TMP_Text questText = UIText(canvasGo.transform, "QuestText", new Vector2(0.5f, 1f), new Vector2(0f, -96f),
                 new Vector2(760f, 60f), "Pazari kur!", 40f, TextAlignmentOptions.Center);
 
-            UIImage(canvasGo.transform, "SettingsButton", new Vector2(0f, 1f), new Vector2(52f, -52f), new Vector2(72f, 72f),
-                new Color(0.9f, 0.9f, 0.92f, 0.9f));
+            GameObject settings = UIImage(canvasGo.transform, "SettingsButton", new Vector2(0f, 1f),
+                new Vector2(56f, -56f), new Vector2(84f, 84f), Color.white);
+            Skin(settings, "button_brown", Color.white);
+            UIText(settings.transform, "Icon", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(70f, 70f),
+                "II", 34f, TextAlignmentOptions.Center);
 
             // Bottom-right dump button — thumb-reachable on a phone, clickable on desktop.
             GameObject trash = UIImage(canvasGo.transform, "TrashButton", new Vector2(1f, 0f),
-                new Vector2(-46f, 46f), new Vector2(132f, 132f), new Color(0.82f, 0.28f, 0.24f, 0.95f));
-            UIText(trash.transform, "Icon", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(120f, 120f),
-                "AT", 40f, TextAlignmentOptions.Center);
+                new Vector2(-50f, 50f), new Vector2(140f, 140f), Color.white);
+            Skin(trash, "button_red", Color.white);
+            UIText(trash.transform, "Icon", new Vector2(0.5f, 0.5f), new Vector2(0f, 4f), new Vector2(126f, 126f),
+                "AT", 38f, TextAlignmentOptions.Center);
 
             Button trashButton = trash.AddComponent<Button>();
             trashButton.targetGraphic = trash.GetComponent<Image>();
@@ -1112,6 +1179,33 @@ namespace MayorOfMedieval.EditorUtils
             Image image = go.AddComponent<Image>();
             image.color = color;
             return go;
+        }
+
+        /// <summary>Loads one of the imported Kenney UI sprites.</summary>
+        private static Sprite UISprite(string name)
+        {
+            return AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/UI/Kenney/" + name + ".png");
+        }
+
+        /// <summary>Skins an existing UI Image with a 9-sliced Kenney sprite.</summary>
+        private static void Skin(GameObject go, string spriteName, Color tint)
+        {
+            if (go == null) return;
+            Image image = go.GetComponent<Image>();
+            if (image == null) return;
+
+            Sprite sprite = UISprite(spriteName);
+            if (sprite == null)
+            {
+                Debug.LogWarning("[SceneSetup] Missing UI sprite: " + spriteName);
+                return;
+            }
+
+            image.sprite = sprite;
+            image.type = Image.Type.Sliced;
+            image.color = tint;
+            // Sliced sprites with no border would otherwise vanish at small sizes.
+            image.pixelsPerUnitMultiplier = 1f;
         }
 
         private static TMP_Text UIText(Transform parent, string name, Vector2 anchor, Vector2 pos, Vector2 size,
