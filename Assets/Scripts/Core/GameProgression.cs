@@ -72,6 +72,12 @@ namespace MayorOfMedieval.Core
             steps.Add(new Step { kind = BuildingKind.CropField, questText = "Tarla ek!" });
             steps.Add(new Step { kind = BuildingKind.Well, hasRequirement = true, requires = BuildingKind.CropField, questText = "Kuyu kaz!" });
             steps.Add(new Step { kind = BuildingKind.Mill, questText = "Degirmen kur!" });
+            steps.Add(new Step { kind = BuildingKind.Treasury, questText = "Hazine kur!" });
+            steps.Add(new Step { kind = BuildingKind.Blacksmith, questText = "Demirci ac!" });
+            steps.Add(new Step { kind = BuildingKind.Barracks, hasRequirement = true, requires = BuildingKind.Blacksmith, questText = "Kisla kur!" });
+            steps.Add(new Step { kind = BuildingKind.Inn, hasRequirement = true, requires = BuildingKind.Mill, questText = "Hani kur!" });
+            steps.Add(new Step { kind = BuildingKind.VillageSquare, questText = "Koy meydani yap!" });
+            steps.Add(new Step { kind = BuildingKind.Church, questText = "Kilise yap!" });
         }
 
         public void RegisterPad(BuildingKind kind, BuildPad pad)

@@ -53,6 +53,10 @@ MonoBehaviour:
   respawnSeconds: 10
   shakeRoot: {fileID: 0}
   shakeAmount: 0.07
+  wanders: 0
+  wanderRadius: 5
+  wanderSpeed: 0.9
+  pauseRange: {x: 1.2, y: 3.5}
 --- !u!1 &5385099066124311778
 GameObject:
   m_ObjectHideFlags: 0

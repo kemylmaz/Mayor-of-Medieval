@@ -6,13 +6,28 @@ namespace MayorOfMedieval.Core
     /// <summary>Every building the player can unlock, in progression order.</summary>
     public enum BuildingKind
     {
-        Market,      // Pazar        - opens Wood/Stone orders
-        LumberCamp,  // Oduncu Kulubesi - workers auto-chop wood
-        Quarry,      // Tas Ocagi    - workers auto-mine stone
-        Farm,        // Ciftlik      - opens Meat orders, workers auto-hunt
-        CropField,   // Tarla        - opens Grain orders, needs Well to run
-        Well,        // Kuyu         - enables CropField production
-        Mill         // Degirmen     - converts Grain into Bread
+        Market,        // Pazar          - sells Wood/Stone off its shelf
+        LumberCamp,    // Oduncu Kulubesi- harvester + carrier to the Market
+        Quarry,        // Tas Ocagi      - harvester + carrier to the Market
+        Farm,          // Ciftlik        - hunts meat, sells it
+        CropField,     // Tarla          - auto grain (needs Well)
+        Well,          // Kuyu           - water source, enables the field
+        Mill,          // Degirmen       - Grain + Water -> Bread
+        Treasury,      // Hazine         - worker sweeps gold from every shop
+        Blacksmith,    // Demirci        - Stone -> Sword
+        Barracks,      // Kisla          - Sword -> Soldier (no customers)
+        Inn,           // Han            - Grain + Water + Bread -> Beer
+        VillageSquare, // Koy Meydani    - decoration
+        Church         // Kilise         - decoration
+    }
+
+    /// <summary>What a hired villager actually does for a living.</summary>
+    public enum WorkerRole
+    {
+        Harvester,     // world node -> home stockpile
+        Carrier,       // home stockpile -> a shop shelf
+        Producer,      // fetches recipe inputs from other buildings
+        GoldCollector  // sweeps accumulated gold from every shop
     }
 
     /// <summary>
@@ -23,12 +38,18 @@ namespace MayorOfMedieval.Core
     {
         public const int StartingGold = 100;
 
-        public const int WorkerCost = 100;
-        public const int MaxWorkersPerStation = 3;
-
         public const int PlayerCarryCapacity = 8;
         public const int WorkerCarryCapacity = 4;
 
+        // --- Hiring -------------------------------------------------------------
+        // Deliberately steep: the first hire is an investment, the second is a commitment.
+        public const int BaseWorkerCost = 150;
+        public const int WorkerCostIncrement = 150;
+
+        public static int WorkerCostFor(int alreadyHired) =>
+            BaseWorkerCost + alreadyHired * WorkerCostIncrement;
+
+        // --- Buildings ----------------------------------------------------------
         /// <summary>Gold price of each build pad. Doubles as the gold threshold that reveals it.</summary>
         public static int CostOf(BuildingKind kind)
         {
@@ -41,6 +62,12 @@ namespace MayorOfMedieval.Core
                 case BuildingKind.CropField: return 400;
                 case BuildingKind.Well: return 100;
                 case BuildingKind.Mill: return 1000;
+                case BuildingKind.Treasury: return 1200;
+                case BuildingKind.Blacksmith: return 1500;
+                case BuildingKind.Barracks: return 2500;
+                case BuildingKind.Inn: return 3000;
+                case BuildingKind.VillageSquare: return 3500;
+                case BuildingKind.Church: return 4500;
                 default: return 100;
             }
         }
@@ -56,11 +83,18 @@ namespace MayorOfMedieval.Core
                 case BuildingKind.CropField: return "Tarla";
                 case BuildingKind.Well: return "Kuyu";
                 case BuildingKind.Mill: return "Degirmen";
+                case BuildingKind.Treasury: return "Hazine";
+                case BuildingKind.Blacksmith: return "Demirci";
+                case BuildingKind.Barracks: return "Kisla";
+                case BuildingKind.Inn: return "Han";
+                case BuildingKind.VillageSquare: return "Koy Meydani";
+                case BuildingKind.Church: return "Kilise";
                 default: return kind.ToString();
             }
         }
 
-        /// <summary>Gold a customer pays per unit delivered. Each tier is clearly richer.</summary>
+        // --- Goods --------------------------------------------------------------
+        /// <summary>Gold a customer pays per unit. Each processing tier is clearly richer.</summary>
         public static int SellPrice(ResourceType type)
         {
             switch (type)
@@ -70,9 +104,14 @@ namespace MayorOfMedieval.Core
                 case ResourceType.Grain: return 18;
                 case ResourceType.Meat: return 25;
                 case ResourceType.Bread: return 40;
+                case ResourceType.Beer: return 60;
+                case ResourceType.Sword: return 90;
                 default: return 0;
             }
         }
+
+        /// <summary>Gold earned for defeating one training dummy at the Barracks.</summary>
+        public const int EnemyBounty = 45;
 
         public static Color ColorOf(ResourceType type)
         {
@@ -85,6 +124,9 @@ namespace MayorOfMedieval.Core
                 case ResourceType.Meat: return new Color(0.80f, 0.28f, 0.26f);
                 case ResourceType.Grain: return new Color(0.90f, 0.76f, 0.30f);
                 case ResourceType.Bread: return new Color(0.78f, 0.55f, 0.25f);
+                case ResourceType.Water: return new Color(0.30f, 0.62f, 0.88f);
+                case ResourceType.Sword: return new Color(0.72f, 0.75f, 0.82f);
+                case ResourceType.Beer: return new Color(0.85f, 0.60f, 0.18f);
                 default: return Color.white;
             }
         }
@@ -99,6 +141,9 @@ namespace MayorOfMedieval.Core
                 case ResourceType.Meat: return "Et";
                 case ResourceType.Grain: return "Tahil";
                 case ResourceType.Bread: return "Ekmek";
+                case ResourceType.Water: return "Su";
+                case ResourceType.Sword: return "Kilic";
+                case ResourceType.Beer: return "Bira";
                 default: return "Altin";
             }
         }

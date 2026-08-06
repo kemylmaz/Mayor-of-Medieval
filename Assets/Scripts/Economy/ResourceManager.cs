@@ -12,7 +12,10 @@ namespace MayorOfMedieval.Economy
         Seed = 3,
         Meat = 4,
         Grain = 5,
-        Bread = 6
+        Bread = 6,
+        Water = 7,
+        Sword = 8,
+        Beer = 9
     }
 
     /// <summary>

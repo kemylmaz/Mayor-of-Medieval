@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using MayorOfMedieval.Core;
 using MayorOfMedieval.Economy;
 using MayorOfMedieval.NPC;
@@ -8,26 +7,31 @@ using UnityEngine;
 namespace MayorOfMedieval.Building
 {
     /// <summary>
-    /// The hire pads attached to a production building. The Lord stands on a pad, 100
-    /// gold drains, and a worker walks out. Capped at three per building.
+    /// The hire pad attached to a building. Each hire costs more than the last, and the
+    /// role each new villager takes is fixed by <see cref="hireOrder"/> — so at a lumber
+    /// camp the first hire chops and the second hauls the pile to a shop.
     /// </summary>
     public class WorkerStation : MonoBehaviour
     {
         [Header("Workers")]
         [SerializeField] private GameObject workerPrefab;
-        [SerializeField] private ResourceType harvestType = ResourceType.Wood;
+        [Tooltip("Role given to hire #1, #2, ... . The list length is the staffing cap.")]
+        [SerializeField] private WorkerRole[] hireOrder = { WorkerRole.Harvester, WorkerRole.Carrier };
+        [SerializeField] private ResourceType cargoType = ResourceType.Wood;
         [SerializeField] private Stockpile stockpile;
-        [SerializeField] private int maxWorkers = GameConfig.MaxWorkersPerStation;
+        [Tooltip("Workshop a Producer hire should keep supplied.")]
+        [SerializeField] private ProductionBuilding workshop;
 
         [Header("Hire Pad")]
         [SerializeField] private Transform padAnchor;
         [SerializeField] private Vector3 padOffset = new Vector3(1.8f, 0f, 0f);
         [SerializeField] private float padRadius = 1.5f;
         [SerializeField] private float payInterval = 0.04f;
-        [SerializeField] private int payPerTick = 2;
+        [SerializeField] private int payPerTick = 3;
 
         public int WorkerCount { get; private set; }
-        public bool IsFullyStaffed => WorkerCount >= maxWorkers;
+        public int MaxWorkers => hireOrder != null ? hireOrder.Length : 0;
+        public bool IsFullyStaffed => WorkerCount >= MaxWorkers;
 
         private int remainingCost;
         private float payTimer;
@@ -40,7 +44,7 @@ namespace MayorOfMedieval.Building
         private void Awake()
         {
             if (padAnchor == null) padAnchor = transform;
-            remainingCost = GameConfig.WorkerCost;
+            remainingCost = GameConfig.WorkerCostFor(0);
         }
 
         private void Start()
@@ -53,7 +57,7 @@ namespace MayorOfMedieval.Building
         {
             if (IsFullyStaffed)
             {
-                if (padVisual != null) padVisual.SetActive(false);
+                if (padVisual != null && padVisual.activeSelf) padVisual.SetActive(false);
                 return;
             }
 
@@ -86,21 +90,32 @@ namespace MayorOfMedieval.Building
 
         private void HireWorker()
         {
+            WorkerRole role = hireOrder[Mathf.Clamp(WorkerCount, 0, hireOrder.Length - 1)];
             WorkerCount++;
-            remainingCost = GameConfig.WorkerCost;
+            remainingCost = GameConfig.WorkerCostFor(WorkerCount);
 
             if (workerPrefab != null)
             {
                 Vector3 spawn = PadPosition + Vector3.forward * 0.6f;
                 GameObject go = Instantiate(workerPrefab, spawn, Quaternion.identity, transform);
-                go.name = "Worker_" + harvestType + "_" + WorkerCount;
+                go.name = "Worker_" + role + "_" + WorkerCount;
 
                 Worker worker = go.GetComponent<Worker>();
                 if (worker == null) worker = go.AddComponent<Worker>();
-                worker.Configure(harvestType, stockpile);
+
+                switch (role)
+                {
+                    case WorkerRole.Producer: worker.ConfigureProducer(workshop); break;
+                    case WorkerRole.GoldCollector: worker.ConfigureCollector(); break;
+                    default: worker.Configure(role, cargoType, stockpile); break;
+                }
             }
 
-            UI.FloatingText.Spawn(PadPosition + Vector3.up * 2f, "Isci +1", new Color(0.4f, 0.9f, 0.4f));
+            string label = role == WorkerRole.Carrier ? "Tasiyici +1"
+                         : role == WorkerRole.Producer ? "Ustaci +1"
+                         : role == WorkerRole.GoldCollector ? "Tahsildar +1"
+                         : "Isci +1";
+            UI.FloatingText.Spawn(PadPosition + Vector3.up * 2f, label, new Color(0.4f, 0.9f, 0.4f));
             RefreshPad();
         }
 
@@ -125,8 +140,9 @@ namespace MayorOfMedieval.Building
                 {
                     Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
                     sharedPadMaterial = new Material(shader);
-                    sharedPadMaterial.SetColor("_BaseColor", new Color(0.35f, 0.8f, 0.4f));
-                    sharedPadMaterial.SetColor("_Color", new Color(0.35f, 0.8f, 0.4f));
+                    Color green = new Color(0.35f, 0.8f, 0.4f);
+                    sharedPadMaterial.SetColor("_BaseColor", green);
+                    sharedPadMaterial.SetColor("_Color", green);
                 }
                 discRenderer.sharedMaterial = sharedPadMaterial;
             }

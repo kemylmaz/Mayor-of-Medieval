@@ -32,6 +32,7 @@ namespace MayorOfMedieval.NPC
 
         private State state = State.WalkingToQueue;
         private ServiceCounter counter;
+        private SalesPoint shop;
         private Vector3 exitPoint;
         private float deliverTimer;
 
@@ -46,6 +47,9 @@ namespace MayorOfMedieval.NPC
             Wanted = wanted;
             Remaining = Mathf.Max(1, amount);
             exitPoint = exit;
+
+            // The shop front owning this counter is what holds the shelves and the till.
+            if (counter != null) shop = counter.GetComponentInParent<SalesPoint>();
 
             BuildBubble();
             RefreshBubble();
@@ -104,6 +108,22 @@ namespace MayorOfMedieval.NPC
             deliverTimer -= Time.deltaTime;
             if (deliverTimer > 0f) return;
 
+            // Preferred path: serve themselves off the shop shelf, dropping payment in the
+            // till. This is what makes stocking a shop worthwhile while the Lord is away.
+            if (shop != null && shop.StockOf(Wanted) > 0)
+            {
+                deliverTimer = deliverInterval;
+
+                int paid;
+                if (!shop.TryBuyOne(Wanted, out paid)) return;
+
+                Remaining--;
+                RefreshBubble();
+                if (Remaining <= 0) Complete();
+                return;
+            }
+
+            // Fallback: the Lord hands goods over in person. Payment still lands in the till.
             CarrySystem player = PlayerRef.Carry;
             if (player == null) return;
             if (Vector3.Distance(player.transform.position, transform.position) > deliverRadius) return;
@@ -115,8 +135,8 @@ namespace MayorOfMedieval.NPC
 
             Remaining--;
             int payout = GameConfig.SellPrice(Wanted);
-            if (ResourceManager.Instance != null) ResourceManager.Instance.AddResource(ResourceType.Gold, payout);
-            UI.FloatingText.Spawn(transform.position + Vector3.up * 2.4f, "+" + payout, new Color(1f, 0.85f, 0.2f));
+            if (shop != null) shop.AddGold(payout);
+            else if (ResourceManager.Instance != null) ResourceManager.Instance.AddResource(ResourceType.Gold, payout);
 
             RefreshBubble();
 

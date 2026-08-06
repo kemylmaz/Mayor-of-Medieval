@@ -161,14 +161,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.WorkerStation
   workerPrefab: {fileID: 3448728260073372457, guid: 4c8a6c61a8728ff42a3b0e1975fb181e, type: 3}
-  harvestType: 2
+  hireOrder: 0000000001000000
+  cargoType: 2
   stockpile: {fileID: 1862607164098602567}
-  maxWorkers: 3
+  workshop: {fileID: 0}
   padAnchor: {fileID: 0}
   padOffset: {x: 2.2, y: 0, z: 0}
   padRadius: 1.5
   payInterval: 0.04
-  payPerTick: 2
+  payPerTick: 3
 --- !u!1 &2957591585239883170
 GameObject:
   m_ObjectHideFlags: 0
@@ -304,12 +305,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.Stockpile
   resourceType: 2
-  capacity: 20
+  capacity: 24
   startingAmount: 0
   playerCanWithdraw: 1
   playerCanDeposit: 0
   interactRadius: 2.2
   transferInterval: 0.12
+  isSupplySource: 1
+  reserveForProduction: 6
   stackRoot: {fileID: 0}
   itemsPerRow: 4
   itemSize: {x: 0.34, y: 0.22, z: 0.34}
@@ -349,7 +352,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 2.4}
-  m_SizeDelta: {x: 3, y: 1}
+  m_SizeDelta: {x: 4, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!23 &3870579432165448112
 MeshRenderer:

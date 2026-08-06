@@ -24,6 +24,13 @@ namespace MayorOfMedieval.Building
         [SerializeField] private float interactRadius = 2.2f;
         [SerializeField] private float transferInterval = 0.12f;
 
+        [Header("Logistics")]
+        [Tooltip("Workers are allowed to collect this good from here (a supply depot).")]
+        [SerializeField] private bool isSupplySource;
+        [Tooltip("Units a shop Carrier must leave behind, so downstream workshops always " +
+                 "get fed before goods are sent off to be sold.")]
+        [SerializeField] private int reserveForProduction;
+
         [Header("Visual")]
         [SerializeField] private Transform stackRoot;
         [SerializeField] private int itemsPerRow = 4;
@@ -35,6 +42,40 @@ namespace MayorOfMedieval.Building
         public int Capacity => capacity;
         public bool IsFull => Amount >= capacity;
         public bool IsEmpty => Amount <= 0;
+        public bool IsSupplySource => isSupplySource;
+
+        /// <summary>Units a Carrier may take right now (everything above the reserve).</summary>
+        public int AvailableToCarry => Mathf.Max(0, Amount - reserveForProduction);
+
+        private static readonly List<Stockpile> all = new List<Stockpile>();
+        public static IReadOnlyList<Stockpile> All => all;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => all.Clear();
+
+        /// <summary>Nearest depot that currently holds the requested good.</summary>
+        public static Stockpile FindSource(ResourceType type, Vector3 from)
+        {
+            Stockpile best = null;
+            float bestDistance = float.MaxValue;
+
+            for (int i = 0; i < all.Count; i++)
+            {
+                Stockpile pile = all[i];
+                if (pile == null || !pile.isSupplySource) continue;
+                if (pile.resourceType != type || pile.IsEmpty) continue;
+
+                float distance = Vector3.SqrMagnitude(pile.transform.position - from);
+                if (distance >= bestDistance) continue;
+
+                bestDistance = distance;
+                best = pile;
+            }
+            return best;
+        }
+
+        private void OnEnable() => all.Add(this);
+        private void OnDisable() => all.Remove(this);
 
         private readonly List<GameObject> visuals = new List<GameObject>();
         private static Material sharedMaterial;

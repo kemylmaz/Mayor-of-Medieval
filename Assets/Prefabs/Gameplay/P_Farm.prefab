@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2006606935140177653
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1335777106556022614}
+  m_Layer: 0
+  m_Name: TillAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1335777106556022614
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2006606935140177653}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 1.8}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8230630346057528671}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2095755210155596292
 GameObject:
   m_ObjectHideFlags: 0
@@ -51,6 +82,8 @@ MonoBehaviour:
   playerCanDeposit: 0
   interactRadius: 2.2
   transferInterval: 0.12
+  isSupplySource: 1
+  reserveForProduction: 0
   stackRoot: {fileID: 0}
   itemsPerRow: 4
   itemSize: {x: 0.34, y: 0.22, z: 0.34}
@@ -176,6 +209,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8230630346057528671}
+  - component: {fileID: 4520547536160020878}
   - component: {fileID: 8524398635833017286}
   m_Layer: 0
   m_Name: P_Farm
@@ -200,10 +234,28 @@ Transform:
   - {fileID: 5921937665137357726}
   - {fileID: 8000986810759796351}
   - {fileID: 36851871995141939}
+  - {fileID: 8224838682407862615}
+  - {fileID: 1335777106556022614}
   - {fileID: 5651114310226399629}
   - {fileID: 3493474423073065286}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4520547536160020878
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2431431076806777392}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aae242f015baf034786934342c6851b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.SalesPoint
+  shelves:
+  - {fileID: 6859305917500161473}
+  collectRadius: 2.4
+  coinAnchor: {fileID: 1335777106556022614}
 --- !u!114 &8524398635833017286
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -217,14 +269,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.WorkerStation
   workerPrefab: {fileID: 3448728260073372457, guid: 4c8a6c61a8728ff42a3b0e1975fb181e, type: 3}
-  harvestType: 4
+  hireOrder: 0000000001000000
+  cargoType: 4
   stockpile: {fileID: 2468663696228115835}
-  maxWorkers: 3
+  workshop: {fileID: 0}
   padAnchor: {fileID: 0}
   padOffset: {x: 2.6, y: 0, z: 0}
   padRadius: 1.5
   payInterval: 0.04
-  payPerTick: 2
+  payPerTick: 3
 --- !u!1 &2792987889202743303
 GameObject:
   m_ObjectHideFlags: 0
@@ -341,7 +394,7 @@ Transform:
   m_GameObject: {fileID: 5505031351905759200}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -2.3}
+  m_LocalPosition: {x: 0, y: 0, z: -2.6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -399,7 +452,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 2.5}
-  m_SizeDelta: {x: 3, y: 1}
+  m_SizeDelta: {x: 4, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!23 &2207929014454760217
 MeshRenderer:
@@ -545,3 +598,60 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 2207929014454760217}
   m_maskType: 0
+--- !u!1 &7695901362293772532
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8224838682407862615}
+  - component: {fileID: 6859305917500161473}
+  m_Layer: 0
+  m_Name: MeatShelf
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8224838682407862615
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7695901362293772532}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -1.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8230630346057528671}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6859305917500161473
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7695901362293772532}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a230e1c3208e34419719817b240793b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.Stockpile
+  resourceType: 4
+  capacity: 12
+  startingAmount: 0
+  playerCanWithdraw: 0
+  playerCanDeposit: 1
+  interactRadius: 2.2
+  transferInterval: 0.12
+  isSupplySource: 0
+  reserveForProduction: 0
+  stackRoot: {fileID: 0}
+  itemsPerRow: 4
+  itemSize: {x: 0.34, y: 0.22, z: 0.34}
+  itemSpacing: 0.38

@@ -149,7 +149,7 @@ Transform:
   m_GameObject: {fileID: 2710051888746651835}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.6, y: 0, z: -2.4}
+  m_LocalPosition: {x: -2.6, y: 0, z: -2.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -168,12 +168,71 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.Stockpile
   resourceType: 6
-  capacity: 20
+  capacity: 16
   startingAmount: 0
   playerCanWithdraw: 1
   playerCanDeposit: 0
   interactRadius: 2.2
   transferInterval: 0.12
+  isSupplySource: 1
+  reserveForProduction: 5
+  stackRoot: {fileID: 0}
+  itemsPerRow: 4
+  itemSize: {x: 0.34, y: 0.22, z: 0.34}
+  itemSpacing: 0.38
+--- !u!1 &3837575411009971358
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2651513425618854448}
+  - component: {fileID: 3476216037994931100}
+  m_Layer: 0
+  m_Name: WaterInput
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2651513425618854448
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3837575411009971358}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.6, y: 0, z: 0.4}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7928529739066349043}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3476216037994931100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3837575411009971358}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a230e1c3208e34419719817b240793b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.Stockpile
+  resourceType: 7
+  capacity: 16
+  startingAmount: 0
+  playerCanWithdraw: 0
+  playerCanDeposit: 1
+  interactRadius: 2.2
+  transferInterval: 0.12
+  isSupplySource: 0
+  reserveForProduction: 0
   stackRoot: {fileID: 0}
   itemsPerRow: 4
   itemSize: {x: 0.34, y: 0.22, z: 0.34}
@@ -277,7 +336,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7928529739066349043}
-  - component: {fileID: 3257161427058756174}
+  - component: {fileID: 7403525885024335227}
+  - component: {fileID: 6910836213930404334}
+  - component: {fileID: 8271498892700320868}
   m_Layer: 0
   m_Name: P_Mill
   m_TagString: Untagged
@@ -302,12 +363,15 @@ Transform:
   - {fileID: 7712523386427212189}
   - {fileID: 7066328874140623939}
   - {fileID: 1440331219619826960}
+  - {fileID: 2651513425618854448}
   - {fileID: 662943455216786725}
+  - {fileID: 1397482047705326519}
+  - {fileID: 2725213031299425426}
   - {fileID: 3025993927785932587}
   - {fileID: 7807292162531028064}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3257161427058756174
+--- !u!114 &7403525885024335227
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -316,15 +380,59 @@ MonoBehaviour:
   m_GameObject: {fileID: 4336473268063224031}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 539f6e16d8efc7d4aa0367f341deed54, type: 3}
+  m_Script: {fileID: 11500000, guid: 595e4950d24802948b0999324ed07378, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.Mill
-  grainInput: {fileID: 1117515279718856298}
-  breadOutput: {fileID: 2867282346521986400}
-  grainPerBread: 1
-  secondsPerBread: 2.5
-  sails: {fileID: 7066328874140623939}
-  sailSpeed: 90
+  m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.ProductionBuilding
+  inputs:
+  - type: 5
+    pile: {fileID: 1117515279718856298}
+    amount: 1
+  - type: 7
+    pile: {fileID: 3476216037994931100}
+    amount: 1
+  output: {fileID: 2867282346521986400}
+  secondsPerCraft: 2.5
+  spinner: {fileID: 7066328874140623939}
+  spinAxis: {x: 0, y: 0, z: 1}
+  spinSpeed: 90
+--- !u!114 &6910836213930404334
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4336473268063224031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aae242f015baf034786934342c6851b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.SalesPoint
+  shelves:
+  - {fileID: 5715359494477201215}
+  collectRadius: 2.4
+  coinAnchor: {fileID: 2725213031299425426}
+--- !u!114 &8271498892700320868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4336473268063224031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37efca25b95f59c4b8fa67233787f384, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.WorkerStation
+  workerPrefab: {fileID: 3448728260073372457, guid: 4c8a6c61a8728ff42a3b0e1975fb181e, type: 3}
+  hireOrder: 0200000001000000
+  cargoType: 6
+  stockpile: {fileID: 2867282346521986400}
+  workshop: {fileID: 7403525885024335227}
+  padAnchor: {fileID: 0}
+  padOffset: {x: 2.4, y: 0, z: 1.8}
+  padRadius: 1.5
+  payInterval: 0.04
+  payPerTick: 3
 --- !u!1 &6300119500324265587
 GameObject:
   m_ObjectHideFlags: 0
@@ -351,7 +459,7 @@ Transform:
   m_GameObject: {fileID: 6300119500324265587}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -2.6}
+  m_LocalPosition: {x: 0, y: 0, z: -3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -488,6 +596,63 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &6861004005982238334
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1397482047705326519}
+  - component: {fileID: 5715359494477201215}
+  m_Layer: 0
+  m_Name: BreadShelf
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1397482047705326519
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6861004005982238334}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: -2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7928529739066349043}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5715359494477201215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6861004005982238334}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a230e1c3208e34419719817b240793b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.Stockpile
+  resourceType: 6
+  capacity: 12
+  startingAmount: 0
+  playerCanWithdraw: 0
+  playerCanDeposit: 1
+  interactRadius: 2.2
+  transferInterval: 0.12
+  isSupplySource: 0
+  reserveForProduction: 0
+  stackRoot: {fileID: 0}
+  itemsPerRow: 4
+  itemSize: {x: 0.34, y: 0.22, z: 0.34}
+  itemSpacing: 0.38
 --- !u!1 &7575847194067422295
 GameObject:
   m_ObjectHideFlags: 0
@@ -514,7 +679,7 @@ Transform:
   m_GameObject: {fileID: 7575847194067422295}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.6, y: 0, z: 2.4}
+  m_LocalPosition: {x: -2.6, y: 0, z: 2.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -533,12 +698,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Building.Stockpile
   resourceType: 5
-  capacity: 20
+  capacity: 16
   startingAmount: 0
   playerCanWithdraw: 0
   playerCanDeposit: 1
   interactRadius: 2.2
   transferInterval: 0.12
+  isSupplySource: 0
+  reserveForProduction: 0
   stackRoot: {fileID: 0}
   itemsPerRow: 4
   itemSize: {x: 0.34, y: 0.22, z: 0.34}
@@ -577,8 +744,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 3.6}
-  m_SizeDelta: {x: 3, y: 1}
+  m_AnchoredPosition: {x: 0, y: 3.7}
+  m_SizeDelta: {x: 4, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!23 &5305017411994064750
 MeshRenderer:
@@ -724,6 +891,37 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 5305017411994064750}
   m_maskType: 0
+--- !u!1 &8862359206688101325
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2725213031299425426}
+  m_Layer: 0
+  m_Name: TillAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2725213031299425426
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8862359206688101325}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.6, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7928529739066349043}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &9167475554147719148
 GameObject:
   m_ObjectHideFlags: 0
