@@ -61,6 +61,16 @@ namespace MayorOfMedieval.Economy
 
         public int Gold => GetResource(ResourceType.Gold);
 
+        /// <summary>Restores a saved wallet. PeakGold is set directly so build pads that
+        /// were already unlocked stay unlocked.</summary>
+        public void RestoreGold(int gold, int peak)
+        {
+            int old = GetResource(ResourceType.Gold);
+            resources[ResourceType.Gold] = Mathf.Max(0, gold);
+            PeakGold = Mathf.Max(peak, resources[ResourceType.Gold]);
+            OnResourceChanged?.Invoke(ResourceType.Gold, old, resources[ResourceType.Gold]);
+        }
+
         public int GetResource(ResourceType type)
         {
             int value;

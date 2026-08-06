@@ -26,6 +26,13 @@ namespace MayorOfMedieval.EditorUtils
         private const string MaterialFolder = "Assets/Materials/Gameplay";
         private const string GeneratedRoot = "--- GAMEPLAY ---";
 
+        [MenuItem("MayorOfMedieval/Delete Save (start fresh)")]
+        public static void ClearSave()
+        {
+            SaveManager.DeleteSave();
+            Debug.Log("[SceneSetup] Save cleared — the next Play starts a brand new village.");
+        }
+
         [MenuItem("MayorOfMedieval/Build Playable World")]
         public static void BuildWorld()
         {
@@ -224,15 +231,89 @@ namespace MayorOfMedieval.EditorUtils
             return tmp;
         }
 
+        // ------------------------------------------------------------ Kenney models
+
+        private const string ModelRoot = "Assets/Models/Kenney/";
+
+        /// <summary>Loads a Kenney FBX, e.g. Model("FantasyTown/wall-door").</summary>
+        private static GameObject Model(string relativePath)
+        {
+            GameObject go = AssetDatabase.LoadAssetAtPath<GameObject>(ModelRoot + relativePath + ".fbx");
+            if (go == null) Debug.LogWarning("[SceneSetup] Missing model: " + relativePath);
+            return go;
+        }
+
+        /// <summary>Drops one Kenney piece into a parent at a grid position.</summary>
+        private static GameObject Piece(string relativePath, Transform parent, Vector3 localPos,
+            float yaw = 0f, float scale = 1f)
+        {
+            GameObject src = Model(relativePath);
+            if (src == null) return null;
+
+            GameObject inst = (GameObject)PrefabUtility.InstantiatePrefab(src, parent);
+            PrefabUtility.UnpackPrefabInstance(inst, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            inst.name = System.IO.Path.GetFileName(relativePath);
+            inst.transform.localPosition = localPos;
+            inst.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            inst.transform.localScale = Vector3.one * scale;
+            return inst;
+        }
+
+        /// <summary>
+        /// Assembles a walled building on Kenney's 1-unit module grid. Walls sit on the
+        /// -X face of their tile, so each side just needs the matching yaw:
+        /// 0 = west, 180 = east, 90 = north (+Z), -90 = south (-Z).
+        /// </summary>
+        private static void RaiseWalls(Transform parent, int tilesX, int tilesZ, string wallModel,
+            string doorModel, string roofModel, int storeys)
+        {
+            float halfX = (tilesX - 1) * 0.5f;
+            float halfZ = (tilesZ - 1) * 0.5f;
+
+            // Door goes on the middle tile of the south face (the side customers approach).
+            int doorTile = tilesX / 2;
+
+            for (int storey = 0; storey < storeys; storey++)
+            {
+                float y = storey;
+                for (int x = 0; x < tilesX; x++)
+                {
+                    float px = x - halfX;
+                    bool isDoor = storey == 0 && x == doorTile && doorModel != null;
+                    Piece(isDoor ? doorModel : wallModel, parent, new Vector3(px, y, -halfZ - 0.5f), -90f);
+                    Piece(wallModel, parent, new Vector3(px, y, halfZ + 0.5f), 90f);
+                }
+                for (int z = 0; z < tilesZ; z++)
+                {
+                    float pz = z - halfZ;
+                    Piece(wallModel, parent, new Vector3(-halfX - 0.5f, y, pz), 0f);
+                    Piece(wallModel, parent, new Vector3(halfX + 0.5f, y, pz), 180f);
+                }
+            }
+
+            if (roofModel == null) return;
+
+            // One continuous gable running along X, stretched to cover the depth. Tiling the
+            // gable in both directions would give a row of parallel ridges, not a roof.
+            bool pointRoof = roofModel.Contains("point");
+            for (int x = 0; x < tilesX; x++)
+            {
+                GameObject tile = Piece(roofModel, parent, new Vector3(x - halfX, storeys, 0f));
+                if (tile != null && !pointRoof) tile.transform.localScale = new Vector3(1f, 1f, tilesZ);
+            }
+        }
+
         // -------------------------------------------------------- world node prefabs
 
         private static GameObject BuildTree(Materials m)
         {
             GameObject root = new GameObject("Tree");
-            Cylinder("Trunk", root.transform, new Vector3(0f, 0.55f, 0f), new Vector3(0.22f, 0.55f, 0.22f), m.Wood);
-            Sphere("Canopy", root.transform, new Vector3(0f, 1.5f, 0f), new Vector3(1.1f, 0.95f, 1.1f), m.Leaf);
+            GameObject visual = new GameObject("Visual");
+            visual.transform.SetParent(root.transform, false);
+            Piece("FantasyTown/tree-high", visual.transform, Vector3.zero, Random.Range(0f, 360f));
 
             HarvestNode node = root.AddComponent<HarvestNode>();
+            SetPrivate(node, "shakeRoot", visual.transform);
             SetPrivate(node, "resourceType", ResourceType.Wood);
             SetPrivate(node, "unitsPerNode", 3);
             SetPrivate(node, "respawnSeconds", 10f);
@@ -242,10 +323,13 @@ namespace MayorOfMedieval.EditorUtils
         private static GameObject BuildRock(Materials m)
         {
             GameObject root = new GameObject("Rock");
-            Sphere("Body", root.transform, new Vector3(0f, 0.35f, 0f), new Vector3(1.1f, 0.75f, 1.1f), m.Stone);
-            Sphere("Chunk", root.transform, new Vector3(0.45f, 0.2f, -0.3f), new Vector3(0.55f, 0.45f, 0.55f), m.Stone);
+            GameObject visual = new GameObject("Visual");
+            visual.transform.SetParent(root.transform, false);
+            Piece("FantasyTown/rock-large", visual.transform, Vector3.zero, Random.Range(0f, 360f));
+            Piece("FantasyTown/rock-small", visual.transform, new Vector3(0.7f, 0f, -0.5f), Random.Range(0f, 360f));
 
             HarvestNode node = root.AddComponent<HarvestNode>();
+            SetPrivate(node, "shakeRoot", visual.transform);
             SetPrivate(node, "resourceType", ResourceType.Stone);
             SetPrivate(node, "unitsPerNode", 3);
             SetPrivate(node, "respawnSeconds", 12f);
@@ -258,8 +342,11 @@ namespace MayorOfMedieval.EditorUtils
             GameObject body = new GameObject("Body");
             body.transform.SetParent(root.transform, false);
 
-            Cube("Torso", body.transform, new Vector3(0f, 0.6f, 0f), new Vector3(0.55f, 0.5f, 0.95f), m.Animal);
-            Sphere("Head", body.transform, new Vector3(0f, 0.85f, 0.6f), new Vector3(0.42f, 0.42f, 0.42f), m.Animal);
+            // Kenney has no livestock model, so the sheep stays hand-built — but it now
+            // matches the kit's palette instead of the old placeholder colours.
+            Cube("Torso", body.transform, new Vector3(0f, 0.6f, 0f), new Vector3(0.62f, 0.55f, 1.0f), m.Animal);
+            Sphere("Head", body.transform, new Vector3(0f, 0.88f, 0.62f), new Vector3(0.44f, 0.44f, 0.44f), m.Animal);
+            Sphere("Wool", body.transform, new Vector3(0f, 0.86f, -0.1f), new Vector3(0.7f, 0.55f, 0.8f), m.Animal);
             Cube("LegA", body.transform, new Vector3(0.2f, 0.18f, 0.3f), new Vector3(0.12f, 0.36f, 0.12f), m.Wood);
             Cube("LegB", body.transform, new Vector3(-0.2f, 0.18f, 0.3f), new Vector3(0.12f, 0.36f, 0.12f), m.Wood);
             Cube("LegC", body.transform, new Vector3(0.2f, 0.18f, -0.3f), new Vector3(0.12f, 0.36f, 0.12f), m.Wood);
@@ -276,17 +363,17 @@ namespace MayorOfMedieval.EditorUtils
             return root;
         }
 
-        private static GameObject BuildCharacterBody(string name, Material bodyMat)
+        /// <summary>Kenney blocky character. Models are ~2.7 units tall, so they get scaled down.</summary>
+        private static GameObject BuildCharacterBody(string name, string characterModel)
         {
             GameObject root = new GameObject(name);
-            Cylinder("Body", root.transform, new Vector3(0f, 0.45f, 0f), new Vector3(0.45f, 0.45f, 0.45f), bodyMat);
-            Sphere("Head", root.transform, new Vector3(0f, 1.05f, 0f), new Vector3(0.5f, 0.5f, 0.5f), bodyMat);
+            Piece("Characters/" + characterModel, root.transform, Vector3.zero, 0f, 0.62f);
             return root;
         }
 
         private static GameObject BuildWorker(Materials m)
         {
-            GameObject root = BuildCharacterBody("Worker", m.Worker);
+            GameObject root = BuildCharacterBody("Worker", "character-d");
             CarrySystem carry = root.AddComponent<CarrySystem>();
             SetPrivate(carry, "capacity", GameConfig.WorkerCarryCapacity);
             root.AddComponent<CarrierBeacon>();
@@ -296,15 +383,15 @@ namespace MayorOfMedieval.EditorUtils
 
         private static GameObject BuildCustomer(Materials m)
         {
-            GameObject root = BuildCharacterBody("Customer", m.Customer);
+            GameObject root = BuildCharacterBody("Customer", "character-h");
             root.AddComponent<Customer>();
             return root;
         }
 
         private static GameObject BuildSoldier(Materials m)
         {
-            GameObject root = BuildCharacterBody("Soldier", m.Soldier);
-            Cube("Blade", root.transform, new Vector3(0.35f, 0.8f, 0.2f), new Vector3(0.1f, 0.7f, 0.1f), m.Sword);
+            GameObject root = BuildCharacterBody("Soldier", "character-n");
+            Piece("FantasyTown/blade", root.transform, new Vector3(0.34f, 0.75f, 0.15f), 0f, 0.9f);
             root.AddComponent<Soldier>();
             return root;
         }
@@ -315,10 +402,7 @@ namespace MayorOfMedieval.EditorUtils
             GameObject visual = new GameObject("Visual");
             visual.transform.SetParent(root.transform, false);
 
-            Cylinder("Post", visual.transform, new Vector3(0f, 0.6f, 0f), new Vector3(0.18f, 0.6f, 0.18f), m.Wood);
-            Cube("Torso", visual.transform, new Vector3(0f, 1.35f, 0f), new Vector3(0.7f, 0.7f, 0.4f), m.Enemy);
-            Cube("Arms", visual.transform, new Vector3(0f, 1.5f, 0f), new Vector3(1.5f, 0.16f, 0.16f), m.Wood);
-            Sphere("Head", visual.transform, new Vector3(0f, 1.95f, 0f), new Vector3(0.42f, 0.42f, 0.42f), m.Enemy);
+            Piece("MiniForest/target", visual.transform, Vector3.zero, 0f, 2.2f);
 
             TrainingDummy dummy = root.AddComponent<TrainingDummy>();
             SetPrivate(dummy, "visualRoot", visual.transform);
@@ -327,12 +411,30 @@ namespace MayorOfMedieval.EditorUtils
 
         // ---------------------------------------------------------- building helpers
 
+        /// <summary>
+        /// Real medieval house built from Kenney modules. The old primitive signature is
+        /// kept so every call site keeps working: size.x/size.z become tile counts.
+        /// </summary>
         private static GameObject BuildHut(string name, Materials m, Vector3 size)
         {
+            int tilesX = Mathf.Max(2, Mathf.RoundToInt(size.x));
+            int tilesZ = Mathf.Max(2, Mathf.RoundToInt(size.z));
+            int storeys = size.y >= 1.7f ? 2 : 1;
+
             GameObject root = new GameObject(name);
-            Cube("Walls", root.transform, new Vector3(0f, size.y * 0.5f, 0f), size, m.Wall, true);
-            Cube("Roof", root.transform, new Vector3(0f, size.y + 0.28f, 0f),
-                new Vector3(size.x * 0.85f, 0.55f, size.z * 0.85f), m.Roof);
+            GameObject shell = new GameObject("Shell");
+            shell.transform.SetParent(root.transform, false);
+
+            bool woodenWalls = name == "LumberCamp" || name == "Farm" || name == "Inn";
+            string wall = woodenWalls ? "FantasyTown/wall-wood" : "FantasyTown/wall";
+            string door = woodenWalls ? "FantasyTown/wall-wood-door" : "FantasyTown/wall-door";
+
+            RaiseWalls(shell.transform, tilesX, tilesZ, wall, door, "FantasyTown/roof-gable", storeys);
+
+            // A blocking collider so the Lord can't walk through the building.
+            BoxCollider box = root.AddComponent<BoxCollider>();
+            box.center = new Vector3(0f, storeys * 0.5f, 0f);
+            box.size = new Vector3(tilesX, storeys, tilesZ);
             return root;
         }
 
@@ -395,8 +497,12 @@ namespace MayorOfMedieval.EditorUtils
 
         private static GameObject BuildMarket(Materials m)
         {
-            GameObject root = BuildHut("Market", m, new Vector3(2.6f, 1.5f, 2.0f));
-            Cube("Stall", root.transform, new Vector3(0f, 0.55f, -1.35f), new Vector3(2.8f, 0.18f, 0.7f), m.Wood);
+            GameObject root = BuildHut("Market", m, new Vector3(3f, 1.5f, 2f));
+            // Kenney ships a finished market stall — put a row of them along the shop front.
+            Piece("FantasyTown/stall-red", root.transform, new Vector3(-1f, 0f, -1.6f), 180f);
+            Piece("FantasyTown/stall-green", root.transform, new Vector3(0f, 0f, -1.6f), 180f);
+            Piece("FantasyTown/stall-red", root.transform, new Vector3(1f, 0f, -1.6f), 180f);
+            Piece("FantasyTown/stall-stool", root.transform, new Vector3(1.8f, 0f, -1.1f));
 
             // Shelves the Lord (or a Carrier) stocks; customers help themselves.
             Stockpile woodShelf = AddStockpile(root, "WoodShelf", new Vector3(-1.6f, 0f, -1.2f), ResourceType.Wood, 12, false, true);
@@ -478,11 +584,16 @@ namespace MayorOfMedieval.EditorUtils
         private static GameObject BuildWell(Materials m)
         {
             GameObject root = new GameObject("Well");
-            Cylinder("Rim", root.transform, new Vector3(0f, 0.45f, 0f), new Vector3(1.2f, 0.45f, 1.2f), m.Stone, true);
-            Cylinder("Water", root.transform, new Vector3(0f, 0.85f, 0f), new Vector3(0.95f, 0.03f, 0.95f), m.Water);
-            Cube("PostA", root.transform, new Vector3(0.5f, 1.3f, 0f), new Vector3(0.12f, 0.9f, 0.12f), m.Wood);
-            Cube("PostB", root.transform, new Vector3(-0.5f, 1.3f, 0f), new Vector3(0.12f, 0.9f, 0.12f), m.Wood);
-            Cube("Roof", root.transform, new Vector3(0f, 1.9f, 0f), new Vector3(1.5f, 0.15f, 1.5f), m.Roof);
+            // Stone rim from the fountain piece, timber posts and a little gable on top.
+            Piece("FantasyTown/fountain-square", root.transform, Vector3.zero);
+            Piece("FantasyTown/pillar-wood", root.transform, new Vector3(0.45f, 0.2f, 0f));
+            Piece("FantasyTown/pillar-wood", root.transform, new Vector3(-0.45f, 0.2f, 0f));
+            Piece("FantasyTown/roof-gable", root.transform, new Vector3(0f, 1.25f, 0f), 90f);
+            Piece("FantasyTown/lantern", root.transform, new Vector3(1.1f, 0f, 0.8f));
+
+            BoxCollider wellBox = root.AddComponent<BoxCollider>();
+            wellBox.center = new Vector3(0f, 0.4f, 0f);
+            wellBox.size = new Vector3(1.2f, 0.8f, 1.2f);
 
             // Buckets the Mill/Inn producers come and fetch.
             Stockpile buckets = AddStockpile(root, "WaterPile", new Vector3(-1.8f, 0f, 0f), ResourceType.Water, 12, true, false, true);
@@ -497,14 +608,20 @@ namespace MayorOfMedieval.EditorUtils
         private static GameObject BuildMill(Materials m, GameObject workerPrefab)
         {
             GameObject root = new GameObject("Mill");
-            Cylinder("Tower", root.transform, new Vector3(0f, 1.4f, 0f), new Vector3(1.8f, 1.4f, 1.8f), m.Wall, true);
-            Cube("Cap", root.transform, new Vector3(0f, 2.95f, 0f), new Vector3(1.9f, 0.4f, 1.9f), m.Roof);
+            GameObject shell = new GameObject("Shell");
+            shell.transform.SetParent(root.transform, false);
+            // Two-storey stone tower topped with a point roof, then Kenney's real sails.
+            RaiseWalls(shell.transform, 2, 2, "FantasyTown/wall", "FantasyTown/wall-door",
+                "FantasyTown/roof-high-point", 2);
+
+            BoxCollider millBox = root.AddComponent<BoxCollider>();
+            millBox.center = new Vector3(0f, 1f, 0f);
+            millBox.size = new Vector3(2f, 2f, 2f);
 
             GameObject sails = new GameObject("Sails");
             sails.transform.SetParent(root.transform, false);
-            sails.transform.localPosition = new Vector3(0f, 2.6f, -1.1f);
-            Cube("BladeA", sails.transform, Vector3.zero, new Vector3(0.25f, 3.2f, 0.1f), m.Wood);
-            Cube("BladeB", sails.transform, Vector3.zero, new Vector3(3.2f, 0.25f, 0.1f), m.Wood);
+            sails.transform.localPosition = new Vector3(0f, 2.4f, -1.15f);
+            Piece("FantasyTown/windmill", sails.transform, Vector3.zero, 90f);
 
             Stockpile grainIn = AddStockpile(root, "GrainInput", new Vector3(-2.6f, 0f, 2.2f), ResourceType.Grain, 16, false, true);
             Stockpile waterIn = AddStockpile(root, "WaterInput", new Vector3(-2.6f, 0f, 0.4f), ResourceType.Water, 16, false, true);
@@ -544,8 +661,9 @@ namespace MayorOfMedieval.EditorUtils
         private static GameObject BuildBlacksmith(Materials m, GameObject workerPrefab)
         {
             GameObject root = BuildHut("Blacksmith", m, new Vector3(2.6f, 1.5f, 2.4f));
-            Cube("Chimney", root.transform, new Vector3(0.9f, 2.2f, 0.8f), new Vector3(0.4f, 1.1f, 0.4f), m.Stone);
-            GameObject anvil = Cube("Anvil", root.transform, new Vector3(0f, 0.35f, -1.7f), new Vector3(0.8f, 0.5f, 0.5f), m.Stone);
+            Piece("FantasyTown/chimney", root.transform, new Vector3(1.5f, 1f, 0.5f), 180f);
+            Piece("FantasyTown/chimney-top", root.transform, new Vector3(1.5f, 2f, 0.5f), 180f);
+            GameObject anvil = Piece("FantasyTown/cart", root.transform, new Vector3(0f, 0f, -2.0f), 180f);
 
             Stockpile stoneIn = AddStockpile(root, "StoneInput", new Vector3(-2.4f, 0f, 1.4f), ResourceType.Stone, 16, false, true);
             // Reserve keeps the Barracks mustering even while swords are also being sold.
@@ -571,8 +689,9 @@ namespace MayorOfMedieval.EditorUtils
         private static GameObject BuildBarracks(Materials m, GameObject workerPrefab, GameObject soldierPrefab)
         {
             GameObject root = BuildHut("Barracks", m, new Vector3(3.2f, 1.7f, 2.6f));
-            Cube("BannerPost", root.transform, new Vector3(-1.4f, 2.4f, -1.2f), new Vector3(0.12f, 1.4f, 0.12f), m.Wood);
-            Cube("Banner", root.transform, new Vector3(-1.0f, 2.9f, -1.2f), new Vector3(0.7f, 0.6f, 0.06f), m.Player);
+            Piece("FantasyTown/banner-red", root.transform, new Vector3(-1.5f, 1.1f, -0.5f));
+            Piece("FantasyTown/banner-red", root.transform, new Vector3(-1.5f, 1.1f, 0.5f));
+            Piece("FantasyTown/fence", root.transform, new Vector3(0f, 0f, -2.2f), 90f);
 
             Stockpile swordIn = AddStockpile(root, "SwordInput", new Vector3(-2.8f, 0f, 0.8f), ResourceType.Sword, 16, false, true);
 
@@ -624,17 +743,16 @@ namespace MayorOfMedieval.EditorUtils
         private static GameObject BuildVillageSquare(Materials m)
         {
             GameObject root = new GameObject("VillageSquare");
-            Cylinder("Plaza", root.transform, new Vector3(0f, 0.04f, 0f), new Vector3(6f, 0.04f, 6f), m.Marble, true);
-            Cylinder("FountainBase", root.transform, new Vector3(0f, 0.25f, 0f), new Vector3(1.8f, 0.25f, 1.8f), m.Stone);
-            Cylinder("FountainWater", root.transform, new Vector3(0f, 0.52f, 0f), new Vector3(1.5f, 0.04f, 1.5f), m.Water);
-            Cylinder("Spout", root.transform, new Vector3(0f, 0.9f, 0f), new Vector3(0.25f, 0.45f, 0.25f), m.Stone);
+            // Paved plaza out of road tiles, with Kenney's finished fountain in the middle.
+            for (int x = -2; x <= 2; x++)
+                for (int z = -2; z <= 2; z++)
+                    Piece("FantasyTown/road", root.transform, new Vector3(x, 0f, z));
 
-            for (int i = 0; i < 4; i++)
-            {
-                float angle = i * Mathf.PI * 0.5f + Mathf.PI * 0.25f;
-                Vector3 pos = new Vector3(Mathf.Cos(angle) * 2.3f, 0.25f, Mathf.Sin(angle) * 2.3f);
-                Cube("Bench", root.transform, pos, new Vector3(0.9f, 0.2f, 0.35f), m.Wood);
-            }
+            Piece("FantasyTown/fountain-round", root.transform, new Vector3(0f, 0.02f, 0f));
+            Piece("FantasyTown/lantern", root.transform, new Vector3(-2f, 0f, -2f));
+            Piece("FantasyTown/lantern", root.transform, new Vector3(2f, 0f, 2f));
+            Piece("FantasyTown/cart", root.transform, new Vector3(2.1f, 0f, -1.6f), 35f);
+            Piece("FantasyTown/hedge", root.transform, new Vector3(-2.1f, 0f, 1.4f));
 
             Label(root.transform, new Vector3(0f, 2.2f, 0f), "KOY MEYDANI", 3f);
             return root;
@@ -643,12 +761,22 @@ namespace MayorOfMedieval.EditorUtils
         private static GameObject BuildChurch(Materials m)
         {
             GameObject root = new GameObject("Church");
-            Cube("Nave", root.transform, new Vector3(0f, 1.2f, 0f), new Vector3(3.0f, 2.4f, 4.5f), m.Marble, true);
-            Cube("Roof", root.transform, new Vector3(0f, 2.7f, 0f), new Vector3(3.3f, 0.5f, 4.8f), m.Roof);
-            Cube("Tower", root.transform, new Vector3(0f, 2.6f, 2.6f), new Vector3(1.4f, 5.2f, 1.4f), m.Marble);
-            Cube("Spire", root.transform, new Vector3(0f, 5.6f, 2.6f), new Vector3(1.1f, 1.2f, 1.1f), m.Roof);
-            Cube("CrossV", root.transform, new Vector3(0f, 6.6f, 2.6f), new Vector3(0.12f, 0.9f, 0.12f), m.Grain);
-            Cube("CrossH", root.transform, new Vector3(0f, 6.75f, 2.6f), new Vector3(0.55f, 0.12f, 0.12f), m.Grain);
+            GameObject nave = new GameObject("Nave");
+            nave.transform.SetParent(root.transform, false);
+            RaiseWalls(nave.transform, 3, 4, "FantasyTown/wall", "FantasyTown/wall-door",
+                "FantasyTown/roof-gable", 2);
+
+            // Bell tower: a narrow 1x1 stack with a tall point roof on top.
+            GameObject tower = new GameObject("Tower");
+            tower.transform.SetParent(root.transform, false);
+            tower.transform.localPosition = new Vector3(0f, 0f, 2.5f);
+            RaiseWalls(tower.transform, 1, 1, "FantasyTown/wall", null, null, 4);
+            Piece("FantasyTown/roof-high-point", tower.transform, new Vector3(0f, 4f, 0f));
+            Piece("FantasyTown/banner-green", tower.transform, new Vector3(-0.5f, 2.6f, 0f));
+
+            BoxCollider churchBox = root.AddComponent<BoxCollider>();
+            churchBox.center = new Vector3(0f, 1f, 0.3f);
+            churchBox.size = new Vector3(3f, 2f, 5f);
 
             Label(root.transform, new Vector3(0f, 7.6f, 0f), "KILISE", 3f);
             return root;
@@ -667,6 +795,7 @@ namespace MayorOfMedieval.EditorUtils
             SetPrivate(wallet, "startingGold", GameConfig.StartingGold);
 
             if (gm.GetComponent<GameProgression>() == null) gm.AddComponent<GameProgression>();
+            if (gm.GetComponent<SaveManager>() == null) gm.AddComponent<SaveManager>();
         }
 
         private static void SetupPlayer(Materials m)
@@ -679,8 +808,19 @@ namespace MayorOfMedieval.EditorUtils
             if (player.GetComponent<CarrySystem>() == null) player.AddComponent<CarrySystem>();
             if (player.GetComponent<CarrierBeacon>() == null) player.AddComponent<CarrierBeacon>();
 
-            Renderer r = player.GetComponent<Renderer>();
-            if (r != null) r.sharedMaterial = m.Player;
+            // Swap the placeholder capsule for a real character model. The capsule's own
+            // renderer is switched off rather than removed, so the CharacterController and
+            // every collider on the Lord keep working exactly as before.
+            Renderer capsule = player.GetComponent<Renderer>();
+            if (capsule != null) capsule.enabled = false;
+
+            Transform oldVisual = player.transform.Find("LordVisual");
+            if (oldVisual != null) Object.DestroyImmediate(oldVisual.gameObject);
+
+            GameObject visual = new GameObject("LordVisual");
+            visual.transform.SetParent(player.transform, false);
+            visual.transform.localPosition = new Vector3(0f, -1f, 0f);
+            Piece("Characters/character-a", visual.transform, Vector3.zero, 0f, 0.62f);
         }
 
         private static void SetupWorldNodes(Transform root, Prefabs prefabs)

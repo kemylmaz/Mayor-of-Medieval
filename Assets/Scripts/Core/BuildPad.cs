@@ -37,6 +37,15 @@ namespace MayorOfMedieval.Core
         public bool IsBuilt { get; private set; }
         public bool IsRevealed { get; private set; }
 
+        /// <summary>The building this pad spawned, so a save can find its piles again.</summary>
+        public GameObject SpawnedBuilding { get; private set; }
+
+        /// <summary>Rebuilds instantly with no payment — used when restoring a save.</summary>
+        public void RestoreBuilt()
+        {
+            if (!IsBuilt) Construct();
+        }
+
         private int remainingCost;
         private float payTimer;
         private float timeOnPad;
@@ -116,6 +125,7 @@ namespace MayorOfMedieval.Core
             {
                 GameObject building = Instantiate(buildingPrefab, spawnPoint.position, spawnPoint.rotation, transform.parent);
                 building.name = GameConfig.DisplayName(kind);
+                SpawnedBuilding = building;
                 StartCoroutine(PopIn(building.transform));
             }
 

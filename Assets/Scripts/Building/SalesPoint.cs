@@ -107,6 +107,13 @@ namespace MayorOfMedieval.Building
 
         // ------------------------------------------------------------------- till
 
+        /// <summary>Restores a saved till balance without paying it out.</summary>
+        public void SetPendingGold(int amount)
+        {
+            PendingGold = Mathf.Max(0, amount);
+            RefreshCoins();
+        }
+
         public void AddGold(int amount)
         {
             if (amount <= 0) return;

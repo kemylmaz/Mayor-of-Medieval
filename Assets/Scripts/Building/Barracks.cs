@@ -25,6 +25,21 @@ namespace MayorOfMedieval.Building
 
         private float timer;
 
+        /// <summary>Re-musters a saved garrison with no sword or gold cost.</summary>
+        public void RestoreSoldiers(int count)
+        {
+            if (soldierPrefab == null) return;
+
+            for (int i = SoldierCount; i < Mathf.Min(count, maxSoldiers); i++)
+            {
+                SoldierCount++;
+                Vector3 spawn = spawnPoint != null ? spawnPoint.position : transform.position + Vector3.forward * 2f;
+                GameObject go = Instantiate(soldierPrefab, spawn, Quaternion.identity, transform);
+                go.name = "Soldier_" + SoldierCount;
+                if (go.GetComponent<Soldier>() == null) go.AddComponent<Soldier>();
+            }
+        }
+
         private void Update()
         {
             if (swordInput == null || soldierPrefab == null) return;

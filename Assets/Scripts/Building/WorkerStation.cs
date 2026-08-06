@@ -88,6 +88,12 @@ namespace MayorOfMedieval.Building
 
         private Vector3 PadPosition => padAnchor.position + padAnchor.TransformVector(padOffset);
 
+        /// <summary>Re-hires a saved crew with no gold cost.</summary>
+        public void RestoreWorkers(int count)
+        {
+            for (int i = WorkerCount; i < Mathf.Min(count, MaxWorkers); i++) HireWorker();
+        }
+
         private void HireWorker()
         {
             WorkerRole role = hireOrder[Mathf.Clamp(WorkerCount, 0, hireOrder.Length - 1)];

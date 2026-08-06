@@ -119,6 +119,13 @@ namespace MayorOfMedieval.Building
             }
         }
 
+        /// <summary>Restores a saved pile size directly.</summary>
+        public void SetAmount(int units)
+        {
+            Amount = Mathf.Clamp(units, 0, capacity);
+            RebuildVisual();
+        }
+
         public int Add(int units)
         {
             int accepted = Mathf.Clamp(units, 0, capacity - Amount);
