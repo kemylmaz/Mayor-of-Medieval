@@ -438,7 +438,9 @@ namespace MayorOfMedieval.EditorUtils
         {
             int tilesX = Mathf.Max(2, Mathf.RoundToInt(size.x));
             int tilesZ = Mathf.Max(2, Mathf.RoundToInt(size.z));
-            int storeys = size.y >= 1.7f ? 2 : 1;
+            // Two storeys minimum. A single 1-unit wall under a 0.57-unit gable reads as
+            // "all roof, no building" from the isometric camera.
+            int storeys = size.y >= 1.7f ? 3 : 2;
 
             GameObject root = new GameObject(name);
             GameObject shell = new GameObject("Shell");
@@ -496,6 +498,13 @@ namespace MayorOfMedieval.EditorUtils
             till.transform.SetParent(parent.transform, false);
             till.transform.localPosition = tillOffset;
             SetPrivate(shop, "coinAnchor", till.transform);
+
+            // A big green collection pad next to the counter, like the reference games.
+            // The takings used to pile up behind the building, so the player had to walk
+            // around the back to notice — let alone collect — them.
+            GameObject pad = Cylinder("CollectPad", till.transform, new Vector3(0f, 0.015f, 0f),
+                new Vector3(2.6f, 0.015f, 2.6f), Mat("M_CollectPad", new Color(0.36f, 0.84f, 0.42f)));
+            pad.name = "CollectPad";
             return shop;
         }
 
@@ -527,7 +536,8 @@ namespace MayorOfMedieval.EditorUtils
             Stockpile woodShelf = AddStockpile(root, "WoodShelf", new Vector3(-1.6f, 0f, -1.2f), ResourceType.Wood, 12, false, true);
             Stockpile stoneShelf = AddStockpile(root, "StoneShelf", new Vector3(1.6f, 0f, -1.2f), ResourceType.Stone, 12, false, true);
 
-            AddSalesPoint(root, new Vector3(0f, 0f, 1.6f), woodShelf, stoneShelf);
+            // Till sits beside the stalls on the customer side, not round the back.
+            AddSalesPoint(root, new Vector3(3.0f, 0f, -1.8f), woodShelf, stoneShelf);
             AddCounter(root, new Vector3(0f, 0f, -2.4f), ResourceType.Wood, ResourceType.Stone);
             Label(root.transform, new Vector3(0f, 2.5f, 0f), "PAZAR", 4f);
             return root;
@@ -557,7 +567,7 @@ namespace MayorOfMedieval.EditorUtils
             Stockpile pile = AddStockpile(root, "MeatPile", new Vector3(-2.3f, 0f, 0f), ResourceType.Meat, 16, true, false, true);
             Stockpile shelf = AddStockpile(root, "MeatShelf", new Vector3(0f, 0f, -1.5f), ResourceType.Meat, 12, false, true);
 
-            AddSalesPoint(root, new Vector3(0f, 0f, 1.8f), shelf);
+            AddSalesPoint(root, new Vector3(3.2f, 0f, -2.0f), shelf);
             AddStation(root, workerPrefab,
                 new[] { WorkerRole.Harvester, WorkerRole.Carrier },
                 ResourceType.Meat, pile, new Vector3(2.6f, 0f, 0f));
@@ -594,7 +604,7 @@ namespace MayorOfMedieval.EditorUtils
             SetPrivate(field, "dryOverlay", dry);
             SetPrivate(field, "cropVisuals", crops.ToArray());
 
-            AddSalesPoint(root, new Vector3(3.2f, 0f, 0f), shelf);
+            AddSalesPoint(root, new Vector3(3.4f, 0f, -2.6f), shelf);
             AddCounter(root, new Vector3(0f, 0f, -3.4f), ResourceType.Grain);
             Label(root.transform, new Vector3(0f, 2f, 0f), "TARLA", 3.5f);
             return root;
@@ -653,7 +663,7 @@ namespace MayorOfMedieval.EditorUtils
             SetPrivate(mill, "output", breadOut);
             SetPrivate(mill, "spinner", sails.transform);
 
-            AddSalesPoint(root, new Vector3(2.6f, 0f, 0f), shelf);
+            AddSalesPoint(root, new Vector3(3.0f, 0f, -2.4f), shelf);
             AddStation(root, workerPrefab, new[] { WorkerRole.Producer, WorkerRole.Carrier },
                 ResourceType.Bread, breadOut, new Vector3(2.4f, 0f, 1.8f), mill);
 
@@ -696,7 +706,7 @@ namespace MayorOfMedieval.EditorUtils
             SetPrivate(forge, "spinSpeed", 0f);
             SetPrivate(forge, "secondsPerCraft", 2.2f);
 
-            AddSalesPoint(root, new Vector3(2.6f, 0f, 0f), shelf);
+            AddSalesPoint(root, new Vector3(3.0f, 0f, -2.2f), shelf);
             AddStation(root, workerPrefab, new[] { WorkerRole.Producer, WorkerRole.Carrier },
                 ResourceType.Sword, swordOut, new Vector3(2.4f, 0f, 1.6f), forge);
 
@@ -750,7 +760,7 @@ namespace MayorOfMedieval.EditorUtils
             SetPrivate(brewery, "output", beerOut);
             SetPrivate(brewery, "secondsPerCraft", 4f);
 
-            AddSalesPoint(root, new Vector3(2.8f, 0f, 0f), shelf);
+            AddSalesPoint(root, new Vector3(3.2f, 0f, -2.4f), shelf);
             AddStation(root, workerPrefab, new[] { WorkerRole.Producer, WorkerRole.Carrier },
                 ResourceType.Beer, beerOut, new Vector3(2.6f, 0f, 1.8f), brewery);
 
@@ -1059,9 +1069,18 @@ namespace MayorOfMedieval.EditorUtils
 
             GameObject visual = new GameObject("Visual");
             visual.transform.SetParent(arrow.transform, false);
-            Cube("Shaft", visual.transform, new Vector3(0f, 0.5f, 0f), new Vector3(0.35f, 0.9f, 0.35f), m.Pad);
-            Cube("Head", visual.transform, Vector3.zero, new Vector3(0.8f, 0.8f, 0.8f), m.Pad).transform.localRotation
-                = Quaternion.Euler(0f, 45f, 45f);
+            // Chunky enough to read instantly at this camera distance.
+            visual.transform.localScale = Vector3.one * 1.7f;
+
+            // Flat arrow lying along +Z so LookRotation(direction) actually aims it at the
+            // objective. The old version was a downward marker, which pointed nowhere useful
+            // once the code started rotating it toward a target.
+            Material arrowMat = Mat("M_QuestArrow", new Color(0.30f, 0.92f, 0.38f));
+            Cube("Shaft", visual.transform, new Vector3(0f, 0f, -0.45f), new Vector3(0.34f, 0.12f, 0.9f), arrowMat);
+            Cube("HeadL", visual.transform, new Vector3(-0.22f, 0f, 0.22f), new Vector3(0.62f, 0.12f, 0.28f), arrowMat)
+                .transform.localRotation = Quaternion.Euler(0f, -45f, 0f);
+            Cube("HeadR", visual.transform, new Vector3(0.22f, 0f, 0.22f), new Vector3(0.62f, 0.12f, 0.28f), arrowMat)
+                .transform.localRotation = Quaternion.Euler(0f, 45f, 0f);
 
             QuestArrow qa = arrow.AddComponent<QuestArrow>();
             SetPrivate(qa, "arrowVisual", visual);
