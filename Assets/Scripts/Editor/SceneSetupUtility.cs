@@ -80,7 +80,8 @@ namespace MayorOfMedieval.EditorUtils
             GameObject world = GameObject.Find("------- WORLD -------");
             if (world == null) return;
 
-            foreach (string child in new[] { "Buildings", "Decorations" })
+            // Empty out the old containers...
+            foreach (string child in new[] { "Buildings", "Decorations", "NPCs" })
             {
                 Transform container = world.transform.Find(child);
                 if (container == null) continue;
@@ -88,6 +89,14 @@ namespace MayorOfMedieval.EditorUtils
                 {
                     Object.DestroyImmediate(container.GetChild(i).gameObject);
                 }
+            }
+
+            // ...and drop the groups left behind by the pre-redesign scene entirely. These
+            // held capsule "cows" and seed spheres that look like scenery but do nothing.
+            foreach (string dead in new[] { "AnimalsGroup", "SeedsGroup", "GridSystem" })
+            {
+                Transform stale = world.transform.Find(dead);
+                if (stale != null) Object.DestroyImmediate(stale.gameObject);
             }
         }
 
