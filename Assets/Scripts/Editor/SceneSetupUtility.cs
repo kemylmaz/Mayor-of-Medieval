@@ -321,6 +321,12 @@ namespace MayorOfMedieval.EditorUtils
             visual.transform.SetParent(root.transform, false);
             Piece("FantasyTown/tree-high", visual.transform, Vector3.zero, Random.Range(0f, 360f));
 
+            // Solid trunk so the Lord walks around the tree instead of through it.
+            CapsuleCollider trunk = root.AddComponent<CapsuleCollider>();
+            trunk.center = new Vector3(0f, 1f, 0f);
+            trunk.radius = 0.32f;
+            trunk.height = 2f;
+
             HarvestNode node = root.AddComponent<HarvestNode>();
             SetPrivate(node, "shakeRoot", visual.transform);
             SetPrivate(node, "resourceType", ResourceType.Wood);
@@ -336,6 +342,10 @@ namespace MayorOfMedieval.EditorUtils
             visual.transform.SetParent(root.transform, false);
             Piece("FantasyTown/rock-large", visual.transform, Vector3.zero, Random.Range(0f, 360f));
             Piece("FantasyTown/rock-small", visual.transform, new Vector3(0.7f, 0f, -0.5f), Random.Range(0f, 360f));
+
+            BoxCollider boulder = root.AddComponent<BoxCollider>();
+            boulder.center = new Vector3(0.1f, 0.5f, 0f);
+            boulder.size = new Vector3(1.8f, 1f, 1.5f);
 
             HarvestNode node = root.AddComponent<HarvestNode>();
             SetPrivate(node, "shakeRoot", visual.transform);
@@ -829,7 +839,22 @@ namespace MayorOfMedieval.EditorUtils
             GameObject visual = new GameObject("LordVisual");
             visual.transform.SetParent(player.transform, false);
             visual.transform.localPosition = new Vector3(0f, -1f, 0f);
-            Piece("Characters/character-a", visual.transform, Vector3.zero, 0f, 0.62f);
+            Piece("Characters/character-a", visual.transform, Vector3.zero, 0f, 0.75f);
+
+            SetupCamera();
+        }
+
+        /// <summary>Locks the isometric angle and hands the camera over to CameraFollow.</summary>
+        private static void SetupCamera()
+        {
+            Camera cam = Camera.main;
+            if (cam == null) return;
+
+            cam.orthographic = true;
+            cam.orthographicSize = 7f;
+            cam.transform.rotation = Quaternion.Euler(45f, 315f, 0f);
+
+            if (cam.GetComponent<CameraFollow>() == null) cam.gameObject.AddComponent<CameraFollow>();
         }
 
         private static void SetupWorldNodes(Transform root, Prefabs prefabs)
@@ -841,9 +866,11 @@ namespace MayorOfMedieval.EditorUtils
 
             // Loosely scattered across the whole map rather than sitting in tight clumps,
             // with a keep-out ring around the village centre so pads stay walkable.
-            ScatterFreely(nodes.transform, prefabs.Tree, 26, 8f, 23f);
-            ScatterFreely(nodes.transform, prefabs.Rock, 22, 9f, 23f);
-            ScatterFreely(nodes.transform, prefabs.Animal, 14, 11f, 22f);
+            // Ring sits outside the village so nodes never grow through a building, but
+            // close enough that a gathering run stays short under the tighter camera.
+            ScatterFreely(nodes.transform, prefabs.Tree, 28, 17f, 27f);
+            ScatterFreely(nodes.transform, prefabs.Rock, 24, 17f, 27f);
+            ScatterFreely(nodes.transform, prefabs.Animal, 14, 18f, 26f);
         }
 
         private static void ScatterFreely(Transform parent, GameObject prefab, int count, float minRadius, float maxRadius)
@@ -884,19 +911,27 @@ namespace MayorOfMedieval.EditorUtils
             GameObject pads = new GameObject("BuildPads");
             pads.transform.SetParent(root, false);
 
-            MakePad(pads.transform, m, BuildingKind.Market, prefabs.Market, new Vector3(5f, 0f, 4f));
-            MakePad(pads.transform, m, BuildingKind.LumberCamp, prefabs.LumberCamp, new Vector3(-6f, 0f, 6f));
-            MakePad(pads.transform, m, BuildingKind.Quarry, prefabs.Quarry, new Vector3(-8f, 0f, -5f));
-            MakePad(pads.transform, m, BuildingKind.Farm, prefabs.Farm, new Vector3(9f, 0f, -5f));
-            MakePad(pads.transform, m, BuildingKind.CropField, prefabs.CropField, new Vector3(1f, 0f, -12f));
-            MakePad(pads.transform, m, BuildingKind.Well, prefabs.Well, new Vector3(6f, 0f, -11f));
-            MakePad(pads.transform, m, BuildingKind.Mill, prefabs.Mill, new Vector3(13f, 0f, 3f));
-            MakePad(pads.transform, m, BuildingKind.Treasury, prefabs.Treasury, new Vector3(-2f, 0f, 8f));
-            MakePad(pads.transform, m, BuildingKind.Blacksmith, prefabs.Blacksmith, new Vector3(-13f, 0f, 1f));
-            MakePad(pads.transform, m, BuildingKind.Barracks, prefabs.Barracks, new Vector3(-14f, 0f, -8f));
-            MakePad(pads.transform, m, BuildingKind.Inn, prefabs.Inn, new Vector3(13f, 0f, -10f));
-            MakePad(pads.transform, m, BuildingKind.VillageSquare, prefabs.VillageSquare, new Vector3(0f, 0f, 14f));
-            MakePad(pads.transform, m, BuildingKind.Church, prefabs.Church, new Vector3(-8f, 0f, 14f));
+            // Compact village so the close camera always frames something interesting.
+            // The Market sits right in front of the spawn (first objective), production
+            // buildings ring it within a short walk, and each processing chain is grouped
+            // with its supplier: Field next to Well, Mill next to both, Blacksmith beside
+            // the Quarry it eats from, Barracks behind the Blacksmith.
+            MakePad(pads.transform, m, BuildingKind.Market, prefabs.Market, new Vector3(0f, 0f, -6f));
+
+            MakePad(pads.transform, m, BuildingKind.LumberCamp, prefabs.LumberCamp, new Vector3(-7f, 0f, 1f));
+            MakePad(pads.transform, m, BuildingKind.Quarry, prefabs.Quarry, new Vector3(-8f, 0f, -7f));
+            MakePad(pads.transform, m, BuildingKind.Blacksmith, prefabs.Blacksmith, new Vector3(-14f, 0f, -4f));
+            MakePad(pads.transform, m, BuildingKind.Barracks, prefabs.Barracks, new Vector3(-15f, 0f, -11f));
+
+            MakePad(pads.transform, m, BuildingKind.Farm, prefabs.Farm, new Vector3(8f, 0f, -7f));
+            MakePad(pads.transform, m, BuildingKind.CropField, prefabs.CropField, new Vector3(9f, 0f, 2f));
+            MakePad(pads.transform, m, BuildingKind.Well, prefabs.Well, new Vector3(13f, 0f, -2f));
+            MakePad(pads.transform, m, BuildingKind.Mill, prefabs.Mill, new Vector3(6f, 0f, 8f));
+            MakePad(pads.transform, m, BuildingKind.Inn, prefabs.Inn, new Vector3(12f, 0f, 8f));
+
+            MakePad(pads.transform, m, BuildingKind.Treasury, prefabs.Treasury, new Vector3(-6f, 0f, 7f));
+            MakePad(pads.transform, m, BuildingKind.VillageSquare, prefabs.VillageSquare, new Vector3(0f, 0f, 5f));
+            MakePad(pads.transform, m, BuildingKind.Church, prefabs.Church, new Vector3(-1f, 0f, 12f));
 
             SetupTrainingGround(root, prefabs);
         }
@@ -1037,6 +1072,17 @@ namespace MayorOfMedieval.EditorUtils
 
             UIImage(canvasGo.transform, "SettingsButton", new Vector2(0f, 1f), new Vector2(52f, -52f), new Vector2(72f, 72f),
                 new Color(0.9f, 0.9f, 0.92f, 0.9f));
+
+            // Bottom-right dump button — thumb-reachable on a phone, clickable on desktop.
+            GameObject trash = UIImage(canvasGo.transform, "TrashButton", new Vector2(1f, 0f),
+                new Vector2(-46f, 46f), new Vector2(132f, 132f), new Color(0.82f, 0.28f, 0.24f, 0.95f));
+            UIText(trash.transform, "Icon", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(120f, 120f),
+                "AT", 40f, TextAlignmentOptions.Center);
+
+            Button trashButton = trash.AddComponent<Button>();
+            trashButton.targetGraphic = trash.GetComponent<Image>();
+            trash.AddComponent<CanvasGroup>();
+            trash.AddComponent<TrashButton>();
 
             GameObject hudGo = new GameObject("HUDManager");
             hudGo.transform.SetParent(canvasGo.transform, false);
