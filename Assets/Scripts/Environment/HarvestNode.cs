@@ -94,6 +94,15 @@ namespace MayorOfMedieval.Environment
 
             if (!harvester.TryAdd(resourceType)) return; // stack full, keep the unit on the node
 
+            Core.AudioManager.PlaySafe(
+                resourceType == ResourceType.Stone ? Core.Sfx.Mine :
+                resourceType == ResourceType.Meat ? Core.Sfx.Hunt : Core.Sfx.Chop);
+
+            // Only the Lord's own gathering counts toward a daily; worker output would
+            // otherwise clear the task without the player doing anything.
+            if (Core.DailyQuests.Instance != null && harvester == Building.PlayerRef.Carry)
+                Core.DailyQuests.Instance.Report(Core.DailyQuests.Track.Gather, 1, resourceType);
+
             unitsLeft--;
             if (unitsLeft <= 0) Deplete();
         }

@@ -121,6 +121,8 @@ namespace MayorOfMedieval.Building
                          : role == WorkerRole.Producer ? "Ustaci +1"
                          : role == WorkerRole.GoldCollector ? "Tahsildar +1"
                          : "Isci +1";
+            Core.AudioManager.PlaySafe(Core.Sfx.Hire);
+            if (Core.DailyQuests.Instance != null) Core.DailyQuests.Instance.Report(Core.DailyQuests.Track.Hire);
             UI.FloatingText.Spawn(PadPosition + Vector3.up * 2f, label, new Color(0.4f, 0.9f, 0.4f));
             RefreshPad();
         }

@@ -47,7 +47,9 @@ namespace MayorOfMedieval.EditorUtils
             GameObject root = new GameObject(GeneratedRoot);
 
             SetupManagers();
+            SetupLighting();
             SetupPlayer(mats);
+            SetupGroundDetail(root.transform);
             SetupWorldNodes(root.transform, prefabs);
             SetupBuildPads(root.transform, prefabs, mats);
             SetupCustomerRoute(root.transform, prefabs);
@@ -825,6 +827,27 @@ namespace MayorOfMedieval.EditorUtils
             RoadNetwork roads = gm.GetComponent<RoadNetwork>();
             if (roads == null) roads = gm.AddComponent<RoadNetwork>();
             SetPrivate(roads, "roadPiece", Model("FantasyTown/road"));
+
+            if (gm.GetComponent<DailyQuests>() == null) gm.AddComponent<DailyQuests>();
+
+            AudioManager audio = gm.GetComponent<AudioManager>();
+            if (audio == null) audio = gm.AddComponent<AudioManager>();
+            // Order must match the Sfx enum.
+            string[] sfxNames =
+            {
+                "sfx_chop", "sfx_mine", "sfx_hunt", "sfx_coins", "sfx_sale",
+                "sfx_build", "sfx_click", "sfx_toggle", "sfx_complete", "sfx_hire"
+            };
+            List<AudioClip> clips = new List<AudioClip>();
+            foreach (string n in sfxNames)
+            {
+                AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/SFX/" + n + ".ogg");
+                if (clip == null) Debug.LogWarning("[SceneSetup] Missing SFX: " + n);
+                clips.Add(clip);
+            }
+            SetPrivate(audio, "sfxClips", clips);
+            SetPrivate(audio, "musicLoop",
+                AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Music/music_village_loop.wav"));
         }
 
         private static void SetupPlayer(Materials m)
@@ -852,6 +875,101 @@ namespace MayorOfMedieval.EditorUtils
             Piece("Characters/character-a", visual.transform, Vector3.zero, 0f, 0.75f);
 
             SetupCamera();
+        }
+
+        /// <summary>
+        /// Gamma space renders noticeably brighter than Linear, so the old sun/ambient
+        /// values blew the scene out to near-white. These are re-tuned for Gamma.
+        /// </summary>
+        private static void SetupLighting()
+        {
+            foreach (Light l in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+            {
+                if (l.type != LightType.Directional) continue;
+                l.intensity = 0.85f;
+                l.color = new Color(1f, 0.96f, 0.89f);
+                l.shadows = LightShadows.Soft;
+                l.shadowStrength = 0.55f;
+                l.transform.rotation = Quaternion.Euler(48f, 40f, 0f);
+            }
+
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.52f, 0.58f, 0.66f);
+            RenderSettings.ambientEquatorColor = new Color(0.42f, 0.45f, 0.42f);
+            RenderSettings.ambientGroundColor = new Color(0.26f, 0.28f, 0.24f);
+        }
+
+        /// <summary>
+        /// Grass tufts, flowers, mushrooms and stumps sprinkled over the field. The bare
+        /// ground plane read as flat green nothing; these break it up without costing
+        /// anything meaningful in draw calls.
+        /// </summary>
+        private static void SetupGroundDetail(Transform root)
+        {
+            GameObject detail = new GameObject("GroundDetail");
+            detail.transform.SetParent(root, false);
+
+            Random.InitState(90210);
+
+            string[] props =
+            {
+                "grass", "grass", "grass_large", "grass_leafs", "grass_leafsLarge",
+                "plant_bush", "plant_flatShort",
+                "flower_redA", "flower_yellowA", "flower_purpleA",
+                "mushroom_red", "stump_old", "rock_smallA", "rock_smallB"
+            };
+
+            for (int i = 0; i < 320; i++)
+            {
+                float angle = Random.Range(0f, Mathf.PI * 2f);
+                // Skip the plaza itself so the centre stays readable.
+                float radius = Mathf.Lerp(4f, 30f, Mathf.Sqrt(Random.value));
+                Vector3 spot = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+
+                string prop = props[Random.Range(0, props.Length)];
+                GameObject go = NatureProp(prop, detail.transform, spot);
+                if (go == null) continue;
+
+                go.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+                float s = Random.Range(0.7f, 1.4f);
+                go.transform.localScale = new Vector3(s, s, s);
+            }
+        }
+
+        /// <summary>
+        /// Nature-kit models carry vertex colours rather than a texture atlas, which URP Lit
+        /// ignores — so each prop gets an explicit flat material instead.
+        /// </summary>
+        private static GameObject NatureProp(string modelName, Transform parent, Vector3 position)
+        {
+            GameObject src = AssetDatabase.LoadAssetAtPath<GameObject>(ModelRoot + "Nature/" + modelName + ".fbx");
+            if (src == null) return null;
+
+            GameObject inst = (GameObject)PrefabUtility.InstantiatePrefab(src, parent);
+            PrefabUtility.UnpackPrefabInstance(inst, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            inst.name = modelName;
+            inst.transform.position = position;
+
+            Material mat = NatureMaterialFor(modelName);
+            if (mat != null)
+            {
+                foreach (Renderer r in inst.GetComponentsInChildren<Renderer>(true)) r.sharedMaterial = mat;
+            }
+            return inst;
+        }
+
+        private static Material NatureMaterialFor(string modelName)
+        {
+            string name;
+            if (modelName.StartsWith("flower_red") || modelName.StartsWith("mushroom")) name = "NatureRed";
+            else if (modelName.StartsWith("flower_yellow")) name = "NatureYellow";
+            else if (modelName.StartsWith("flower_purple")) name = "NaturePurple";
+            else if (modelName.StartsWith("stump")) name = "NatureWood";
+            else if (modelName.StartsWith("rock")) name = "NatureStone";
+            else if (modelName.StartsWith("plant_bush")) name = "NatureBush";
+            else name = "NatureGreen";
+
+            return AssetDatabase.LoadAssetAtPath<Material>(ModelRoot + "Nature/M_" + name + ".mat");
         }
 
         /// <summary>Locks the isometric angle and hands the camera over to CameraFollow.</summary>
@@ -1165,10 +1283,20 @@ namespace MayorOfMedieval.EditorUtils
                 new Vector2(760f, 60f), "Pazari kur!", 40f, TextAlignmentOptions.Center);
 
             GameObject settings = UIImage(canvasGo.transform, "SettingsButton", new Vector2(0f, 1f),
-                new Vector2(56f, -56f), new Vector2(84f, 84f), Color.white);
+                new Vector2(64f, -64f), new Vector2(100f, 100f), Color.white);
             Skin(settings, "button_brown", Color.white);
-            UIText(settings.transform, "Icon", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(70f, 70f),
-                "II", 34f, TextAlignmentOptions.Center);
+            // Hamburger drawn from plain bars — the gear glyph is not in the TMP font and
+            // rendered as a missing-character box.
+            for (int i = -1; i <= 1; i++)
+            {
+                UIImage(settings.transform, "Bar" + i, new Vector2(0.5f, 0.5f), new Vector2(0f, i * -18f),
+                    new Vector2(48f, 7f), new Color(0.32f, 0.24f, 0.16f, 1f));
+            }
+            Button settingsButton = settings.AddComponent<Button>();
+            settingsButton.targetGraphic = settings.GetComponent<Image>();
+
+            BuildSettingsPanel(canvasGo.transform, settingsButton);
+            BuildDailyQuestCard(canvasGo.transform);
 
             // Bottom-right dump button — thumb-reachable on a phone, clickable on desktop.
             GameObject trash = UIImage(canvasGo.transform, "TrashButton", new Vector2(1f, 0f),
@@ -1215,6 +1343,137 @@ namespace MayorOfMedieval.EditorUtils
             hudGo.transform.SetParent(canvasGo.transform, false);
             HUDManager hud = hudGo.AddComponent<HUDManager>();
             hud.Bind(goldText, questText, slider, progressLabel);
+        }
+
+        /// <summary>Gear popup with music and SFX sliders, hidden until the gear is tapped.</summary>
+        private static void BuildSettingsPanel(Transform canvas, Button openButton)
+        {
+            GameObject dim = UIImage(canvas, "SettingsPanel", new Vector2(0.5f, 0.5f), Vector2.zero,
+                new Vector2(100f, 100f), new Color(0f, 0f, 0f, 0.55f));
+            StretchFull((RectTransform)dim.transform);
+
+            GameObject card = UIImage(dim.transform, "Card", new Vector2(0.5f, 0.5f), Vector2.zero,
+                new Vector2(640f, 460f), Color.white);
+            Skin(card, "panel_brown", Color.white);
+
+            UIText(card.transform, "Title", new Vector2(0.5f, 1f), new Vector2(0f, -46f),
+                new Vector2(520f, 70f), "AYARLAR", 46f, TextAlignmentOptions.Center);
+
+            Slider musicSlider = BuildLabelledSlider(card.transform, "Music", "MUZIK", new Vector2(0f, 24f));
+            Slider sfxSlider = BuildLabelledSlider(card.transform, "Sfx", "SES", new Vector2(0f, -96f));
+
+            GameObject close = UIImage(card.transform, "CloseButton", new Vector2(0.5f, 0f),
+                new Vector2(0f, 62f), new Vector2(260f, 88f), Color.white);
+            Skin(close, "button_red", Color.white);
+            UIText(close.transform, "Label", new Vector2(0.5f, 0.5f), new Vector2(0f, 4f),
+                new Vector2(240f, 70f), "KAPAT", 38f, TextAlignmentOptions.Center);
+            Button closeButton = close.AddComponent<Button>();
+            closeButton.targetGraphic = close.GetComponent<Image>();
+
+            SettingsPanel panel = dim.AddComponent<SettingsPanel>();
+            SetPrivate(panel, "panelRoot", dim);
+            SetPrivate(panel, "openButton", openButton);
+            SetPrivate(panel, "closeButton", closeButton);
+            SetPrivate(panel, "musicSlider", musicSlider);
+            SetPrivate(panel, "sfxSlider", sfxSlider);
+        }
+
+        private static Slider BuildLabelledSlider(Transform parent, string name, string caption, Vector2 pos)
+        {
+            UIText(parent, name + "Label", new Vector2(0.5f, 0.5f), pos + new Vector2(-210f, 46f),
+                new Vector2(240f, 50f), caption, 32f, TextAlignmentOptions.Left);
+
+            GameObject barGo = new GameObject(name + "Slider", typeof(RectTransform));
+            barGo.transform.SetParent(parent, false);
+            RectTransform rect = (RectTransform)barGo.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(500f, 44f);
+            rect.anchoredPosition = pos;
+
+            Slider slider = barGo.AddComponent<Slider>();
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.transition = Selectable.Transition.None;
+
+            GameObject bg = UIImage(barGo.transform, "Background", new Vector2(0.5f, 0.5f), Vector2.zero,
+                new Vector2(500f, 44f), Color.white);
+            StretchFull((RectTransform)bg.transform);
+            Skin(bg, "progress_green_border", Color.white);
+
+            GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
+            fillArea.transform.SetParent(barGo.transform, false);
+            RectTransform fillAreaRect = (RectTransform)fillArea.transform;
+            StretchFull(fillAreaRect);
+            fillAreaRect.offsetMin = new Vector2(8f, 8f);
+            fillAreaRect.offsetMax = new Vector2(-8f, -8f);
+
+            GameObject fill = UIImage(fillArea.transform, "Fill", new Vector2(0.5f, 0.5f), Vector2.zero,
+                new Vector2(500f, 44f), Color.white);
+            StretchFull((RectTransform)fill.transform);
+            Skin(fill, "progress_green", Color.white);
+
+            slider.fillRect = (RectTransform)fill.transform;
+            slider.targetGraphic = fill.GetComponent<Image>();
+            return slider;
+        }
+
+        /// <summary>Daily-task card under the quest banner, mirroring the reference layout.</summary>
+        private static void BuildDailyQuestCard(Transform canvas)
+        {
+            GameObject card = UIImage(canvas, "DailyCard", new Vector2(0f, 1f), new Vector2(30f, -190f),
+                new Vector2(440f, 240f), Color.white);
+            // Darkened so the light task text stays legible on top of it.
+            Skin(card, "panel_brown_dark", Color.white);
+
+            UIText(card.transform, "Title", new Vector2(0.5f, 1f), new Vector2(0f, -34f),
+                new Vector2(400f, 46f), "GUNLUK GOREVLER", 26f, TextAlignmentOptions.Center);
+
+            DailyQuestCard view = card.AddComponent<DailyQuestCard>();
+
+            List<TMP_Text> rowTexts = new List<TMP_Text>();
+            List<Slider> rowBars = new List<Slider>();
+            for (int i = 0; i < 3; i++)
+            {
+                float y = -70f - i * 44f;
+                rowTexts.Add(UIText(card.transform, "Row" + i, new Vector2(0.5f, 1f), new Vector2(-6f, y),
+                    new Vector2(380f, 34f), "-", 22f, TextAlignmentOptions.Left));
+                rowBars.Add(BuildThinBar(card.transform, "Bar" + i, new Vector2(0f, y - 22f)));
+            }
+            SetPrivate(view, "rows", rowTexts);
+            SetPrivate(view, "bars", rowBars);
+        }
+
+        private static Slider BuildThinBar(Transform parent, string name, Vector2 pos)
+        {
+            GameObject barGo = new GameObject(name, typeof(RectTransform));
+            barGo.transform.SetParent(parent, false);
+            RectTransform rect = (RectTransform)barGo.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.sizeDelta = new Vector2(370f, 12f);
+            rect.anchoredPosition = pos;
+
+            Slider slider = barGo.AddComponent<Slider>();
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.interactable = false;
+            slider.transition = Selectable.Transition.None;
+
+            GameObject bg = UIImage(barGo.transform, "Background", new Vector2(0.5f, 0.5f), Vector2.zero,
+                new Vector2(370f, 12f), new Color(0.2f, 0.18f, 0.16f, 0.9f));
+            StretchFull((RectTransform)bg.transform);
+
+            GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
+            fillArea.transform.SetParent(barGo.transform, false);
+            StretchFull((RectTransform)fillArea.transform);
+
+            GameObject fill = UIImage(fillArea.transform, "Fill", new Vector2(0.5f, 0.5f), Vector2.zero,
+                new Vector2(370f, 12f), new Color(0.38f, 0.85f, 0.42f));
+            StretchFull((RectTransform)fill.transform);
+
+            slider.fillRect = (RectTransform)fill.transform;
+            slider.targetGraphic = fill.GetComponent<Image>();
+            return slider;
         }
 
         private static void StretchFull(RectTransform rect)

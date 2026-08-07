@@ -1,0 +1,7 @@
+music_village_loop.wav
+  "Medieval: The Old Tower Inn" (loop version)
+  Source: https://opengameart.org/content/medieval-the-old-tower-inn
+  License: CC0 (public domain) - no attribution required.
+
+SFX in Assets/Audio/SFX are from Kenney.nl audio packs
+  (RPG Audio, UI Audio, Music Jingles) - all CC0.

@@ -15,8 +15,12 @@ namespace MayorOfMedieval.Core
         [SerializeField] private GameObject roadPiece;
         [Tooltip("Spacing between paving tiles along a path.")]
         [SerializeField] private float tileStep = 1f;
-        [Tooltip("Stop this far short of each end so tiles don't sink into the buildings.")]
-        [SerializeField] private float endPadding = 2.2f;
+        [Tooltip("Stop this far short of the building so tiles don't sink into its walls.")]
+        [SerializeField] private float endPadding = 2.6f;
+        [Tooltip("Leave the plaza itself clear — spokes start outside it.")]
+        [SerializeField] private float centrePadding = 3.2f;
+        [Tooltip("Village centre every road radiates from.")]
+        [SerializeField] private Vector3 hubCentre = Vector3.zero;
 
         private readonly List<Vector3> hubs = new List<Vector3>();
         private Transform container;
@@ -34,40 +38,42 @@ namespace MayorOfMedieval.Core
             container = holder.transform;
         }
 
-        /// <summary>Called when a building finishes. Paves a road to its nearest neighbour.</summary>
+        /// <summary>
+        /// Called when a building finishes. Every road is a straight spoke from the village
+        /// centre, so the network comes out as a clean wheel. Chaining each building to its
+        /// nearest neighbour instead produced a crooked zig-zag that never looked planned.
+        /// </summary>
         public void Connect(Vector3 position)
         {
             Vector3 flat = new Vector3(position.x, 0f, position.z);
+            if (hubs.Contains(flat)) return;
 
-            Vector3 nearest = Vector3.zero;
-            float bestDistance = float.MaxValue;
-            for (int i = 0; i < hubs.Count; i++)
-            {
-                float d = Vector3.SqrMagnitude(hubs[i] - flat);
-                if (d >= bestDistance) continue;
-                bestDistance = d;
-                nearest = hubs[i];
-            }
-
-            // First building has nothing to link to yet; it just seeds the network.
-            if (hubs.Count > 0) Pave(nearest, flat);
+            Pave(hubCentre, flat);
             hubs.Add(flat);
         }
 
+        /// <summary>Straight run of tiles, each aligned to the direction of travel.</summary>
         private void Pave(Vector3 from, Vector3 to)
         {
             if (roadPiece == null) return;
 
             Vector3 delta = to - from;
             float length = delta.magnitude;
-            if (length <= endPadding * 2f) return;
+            if (length <= endPadding + centrePadding) return;
 
             Vector3 dir = delta / length;
             float yaw = Quaternion.LookRotation(dir).eulerAngles.y;
 
-            for (float travelled = endPadding; travelled <= length - endPadding; travelled += tileStep)
+            // Snap tile spacing so the run divides evenly and ends flush with the building
+            // instead of stopping at a ragged half-tile.
+            float span = length - endPadding - centrePadding;
+            int count = Mathf.Max(1, Mathf.RoundToInt(span / tileStep));
+            float step = span / count;
+
+            for (int i = 0; i <= count; i++)
             {
-                GameObject tile = Instantiate(roadPiece, from + dir * travelled, Quaternion.Euler(0f, yaw, 0f), container);
+                Vector3 spot = from + dir * (centrePadding + step * i);
+                GameObject tile = Instantiate(roadPiece, spot, Quaternion.Euler(0f, yaw, 0f), container);
                 tile.name = "RoadTile";
                 // Sit a hair above the ground so the paving never z-fights with the grass.
                 tile.transform.position += Vector3.up * 0.012f;

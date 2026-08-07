@@ -76,6 +76,7 @@ namespace MayorOfMedieval.Building
             shelf.Remove(1);
             paid = GameConfig.SellPrice(type);
             AddGold(paid);
+            Core.AudioManager.PlaySafe(Core.Sfx.Sale);
             return true;
         }
 
@@ -134,6 +135,9 @@ namespace MayorOfMedieval.Building
             RefreshCoins();
 
             if (ResourceManager.Instance != null) ResourceManager.Instance.AddResource(ResourceType.Gold, amount);
+            Core.AudioManager.PlaySafe(Core.Sfx.Coins);
+            if (Core.DailyQuests.Instance != null)
+                Core.DailyQuests.Instance.Report(Core.DailyQuests.Track.CollectGold, amount);
 
             Vector3 popupAt = collector != null ? collector.position : coinAnchor.position;
             UI.FloatingText.Spawn(popupAt + Vector3.up * 2.2f, "+" + amount, new Color(1f, 0.85f, 0.2f));

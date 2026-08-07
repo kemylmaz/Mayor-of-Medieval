@@ -132,6 +132,9 @@ namespace MayorOfMedieval.Core
             if (GameProgression.Instance != null) GameProgression.Instance.NotifyBuilt(kind);
             if (RoadNetwork.Instance != null) RoadNetwork.Instance.Connect(spawnPoint.position);
 
+            AudioManager.PlaySafe(Sfx.Build);
+            AudioManager.PlaySafe(Sfx.Complete);
+            if (DailyQuests.Instance != null) DailyQuests.Instance.Report(DailyQuests.Track.Build);
             UI.FloatingText.Spawn(transform.position + Vector3.up * 2f, GameConfig.DisplayName(kind) + "!", new Color(0.4f, 0.9f, 0.4f));
 
             if (visualRoot != null) visualRoot.SetActive(false);
