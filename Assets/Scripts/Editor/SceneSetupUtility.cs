@@ -1216,6 +1216,16 @@ namespace MayorOfMedieval.EditorUtils
             SetPrivate(qa, "arrowVisual", visual);
         }
 
+
+        // ================================================================== HUD
+        // Laid out to match the reference playables: circular buttons, rounded pill
+        // counters, a badge-and-bar task card, and consistent margins. Every element is
+        // built from the same few helpers so proportions stay in step.
+
+        private const float Margin = 34f;
+        private const float PillHeight = 92f;
+        private const float CircleSize = 108f;
+
         private static void SetupHUD()
         {
             GameObject canvasGo = new GameObject("HUDCanvas");
@@ -1228,145 +1238,232 @@ namespace MayorOfMedieval.EditorUtils
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            GameObject goldPanel = UIImage(canvasGo.transform, "GoldPanel",
-                new Vector2(1f, 1f), new Vector2(-30f, -30f), new Vector2(280f, 96f), Color.white);
-            Skin(goldPanel, "panel_brown", Color.white);
+            Transform root = canvasGo.transform;
 
-            UIImage(goldPanel.transform, "Icon", new Vector2(0f, 0.5f), new Vector2(60f, 0f), new Vector2(52f, 52f),
+            BuildJoystickZone(root);                       // behind everything
+            TMP_Text goldText = BuildGoldPill(root);
+            Slider questBar; TMP_Text questText;
+            BuildTaskCard(root, out questText, out questBar);
+            TMP_Text progressLabel = BuildLevelBadge(root);
+            Button settingsButton = BuildCircleButton(root, "SettingsButton",
+                new Vector2(0f, 1f), new Vector2(Margin + CircleSize * 0.5f, -(Margin + CircleSize * 0.5f)), "round_brown");
+            AddHamburger(settingsButton.transform);
+
+            BuildTrashButton(root);
+            BuildSettingsPanel(root, settingsButton);
+            BuildDailyQuestCard(root);
+
+            GameObject hudGo = new GameObject("HUDManager");
+            hudGo.transform.SetParent(root, false);
+            HUDManager hud = hudGo.AddComponent<HUDManager>();
+            hud.Bind(goldText, questText, questBar, progressLabel);
+        }
+
+        /// <summary>Rounded dark pill, top-right: big number with a coloured coin badge.</summary>
+        private static TMP_Text BuildGoldPill(Transform root)
+        {
+            GameObject pill = UIImage(root, "GoldPill", new Vector2(1f, 1f),
+                new Vector2(-Margin, -Margin), new Vector2(300f, PillHeight), Color.white);
+            Skin(pill, "panel_brown_dark", Color.white);
+
+            GameObject badge = UICircle(pill.transform, "CoinBadge", new Vector2(1f, 0.5f),
+                new Vector2(-14f, 0f), 68f, "round_brown");
+            UIImage(badge.transform, "Coin", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 40f),
                 GameConfig.ColorOf(ResourceType.Gold));
-            TMP_Text goldText = UIText(goldPanel.transform, "GoldText", new Vector2(0.5f, 0.5f), new Vector2(30f, 0f),
-                new Vector2(160f, 70f), "100", 46f, TextAlignmentOptions.Right);
 
-            GameObject questPanel = UIImage(canvasGo.transform, "QuestPanel",
-                new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(600f, 74f), Color.white);
-            Skin(questPanel, "panel_brown_dark", Color.white);
+            return UIText(pill.transform, "GoldText", new Vector2(0f, 0.5f), new Vector2(24f, 0f),
+                new Vector2(190f, 70f), "100", 48f, TextAlignmentOptions.Left);
+        }
 
-            GameObject barGo = new GameObject("ProgressBar", typeof(RectTransform));
-            barGo.transform.SetParent(questPanel.transform, false);
-            RectTransform barRect = (RectTransform)barGo.transform;
-            barRect.anchorMin = barRect.anchorMax = new Vector2(0.5f, 0.5f);
-            barRect.sizeDelta = new Vector2(520f, 34f);
-            barRect.anchoredPosition = Vector2.zero;
+        /// <summary>Top-centre task card: circular icon badge, title, progress bar beneath.</summary>
+        private static void BuildTaskCard(Transform root, out TMP_Text title, out Slider bar)
+        {
+            GameObject card = UIImage(root, "TaskCard", new Vector2(0.5f, 1f),
+                new Vector2(0f, -Margin), new Vector2(660f, 150f), Color.white);
+            Skin(card, "panel_brown", Color.white);
+
+            // Badge overlaps the left edge, exactly like the reference layout.
+            GameObject badge = UICircle(card.transform, "Badge", new Vector2(0f, 0.5f),
+                new Vector2(6f, 0f), 116f, "round_brown_dark");
+            UIImage(badge.transform, "Glyph", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(52f, 52f),
+                new Color(0.42f, 0.86f, 0.46f));
+
+            title = UIText(card.transform, "QuestText", new Vector2(0.5f, 1f), new Vector2(44f, -26f),
+                new Vector2(470f, 56f), "Pazari kur!", 34f, TextAlignmentOptions.Left);
+
+            bar = BuildBar(card.transform, "QuestBar", new Vector2(0.5f, 0f), new Vector2(44f, 30f),
+                new Vector2(470f, 40f));
+            return;
+        }
+
+        /// <summary>Bottom-left level badge with the completion percentage.</summary>
+        private static TMP_Text BuildLevelBadge(Transform root)
+        {
+            GameObject pill = UIImage(root, "LevelPill", new Vector2(0f, 0f),
+                new Vector2(Margin, Margin), new Vector2(280f, PillHeight), Color.white);
+            Skin(pill, "panel_brown_dark", Color.white);
+
+            UIText(pill.transform, "Caption", new Vector2(0f, 1f), new Vector2(22f, -12f),
+                new Vector2(240f, 34f), "KOY GELISIMI", 22f, TextAlignmentOptions.Left);
+
+            GameObject barGo = new GameObject("LevelBar", typeof(RectTransform));
+            barGo.transform.SetParent(pill.transform, false);
+            RectTransform rect = (RectTransform)barGo.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 0f);
+            rect.sizeDelta = new Vector2(236f, 28f);
+            rect.anchoredPosition = new Vector2(22f, 16f);
+
+            return UIText(pill.transform, "ProgressText", new Vector2(1f, 0f), new Vector2(-18f, 14f),
+                new Vector2(90f, 34f), "0%", 26f, TextAlignmentOptions.Right);
+        }
+
+        private static void BuildTrashButton(Transform root)
+        {
+            Button button = BuildCircleButton(root, "TrashButton", new Vector2(1f, 0f),
+                new Vector2(-(Margin + CircleSize * 0.6f), Margin + CircleSize * 0.6f), "round_grey_dark");
+
+            GameObject go = button.gameObject;
+            ((RectTransform)go.transform).sizeDelta = new Vector2(CircleSize * 1.2f, CircleSize * 1.2f);
+            UIText(go.transform, "Label", new Vector2(0.5f, 0.5f), new Vector2(0f, 2f),
+                new Vector2(110f, 60f), "AT", 34f, TextAlignmentOptions.Center);
+
+            go.AddComponent<CanvasGroup>();
+            go.AddComponent<TrashButton>();
+        }
+
+        /// <summary>Invisible left-half touch region that hosts the floating stick.</summary>
+        private static void BuildJoystickZone(Transform root)
+        {
+            GameObject zone = new GameObject("JoystickZone", typeof(RectTransform));
+            zone.transform.SetParent(root, false);
+            RectTransform rect = (RectTransform)zone.transform;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = new Vector2(0.62f, 1f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            Image hit = zone.AddComponent<Image>();
+            hit.color = new Color(0f, 0f, 0f, 0f); // invisible but still raycastable
+
+            GameObject ring = UICircle(zone.transform, "Ring", new Vector2(0.5f, 0.5f), Vector2.zero, 250f, "round_grey");
+            GameObject knob = UICircle(zone.transform, "Knob", new Vector2(0.5f, 0.5f), Vector2.zero, 120f, "round_brown");
+            ring.GetComponent<Image>().raycastTarget = false;
+            knob.GetComponent<Image>().raycastTarget = false;
+            ring.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.5f);
+
+            CanvasGroup group = zone.AddComponent<CanvasGroup>();
+            group.alpha = 0f;
+
+            VirtualJoystick joystick = zone.AddComponent<VirtualJoystick>();
+            SetPrivate(joystick, "ring", ring.GetComponent<RectTransform>());
+            SetPrivate(joystick, "knob", knob.GetComponent<RectTransform>());
+            SetPrivate(joystick, "group", group);
+        }
+
+        // ------------------------------------------------------------ HUD helpers
+
+        /// <summary>Perfectly round button — circular sprites must never be 9-sliced.</summary>
+        private static GameObject UICircle(Transform parent, string name, Vector2 anchor, Vector2 pos,
+            float diameter, string spriteName)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+
+            RectTransform rect = (RectTransform)go.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
+            rect.sizeDelta = new Vector2(diameter, diameter);
+            rect.anchoredPosition = pos;
+
+            Image image = go.AddComponent<Image>();
+            Sprite sprite = UISprite(spriteName);
+            if (sprite != null)
+            {
+                image.sprite = sprite;
+                image.type = Image.Type.Simple;      // keeps the circle round
+                image.preserveAspect = true;
+            }
+            return go;
+        }
+
+        private static Button BuildCircleButton(Transform parent, string name, Vector2 anchor, Vector2 pos, string sprite)
+        {
+            GameObject go = UICircle(parent, name, anchor, pos, CircleSize, sprite);
+            Button button = go.AddComponent<Button>();
+            button.targetGraphic = go.GetComponent<Image>();
+            return button;
+        }
+
+        private static void AddHamburger(Transform parent)
+        {
+            for (int i = -1; i <= 1; i++)
+            {
+                UIImage(parent, "Bar" + i, new Vector2(0.5f, 0.5f), new Vector2(0f, i * -17f),
+                    new Vector2(46f, 7f), new Color(0.96f, 0.93f, 0.86f, 1f));
+            }
+        }
+
+        /// <summary>Framed progress bar used by the task card.</summary>
+        private static Slider BuildBar(Transform parent, string name, Vector2 anchor, Vector2 pos, Vector2 size)
+        {
+            GameObject barGo = new GameObject(name, typeof(RectTransform));
+            barGo.transform.SetParent(parent, false);
+            RectTransform rect = (RectTransform)barGo.transform;
+            rect.anchorMin = rect.anchorMax = rect.pivot = anchor;
+            rect.sizeDelta = size;
+            rect.anchoredPosition = pos;
 
             Slider slider = barGo.AddComponent<Slider>();
-            slider.transition = Selectable.Transition.None;
-            slider.interactable = false;
             slider.minValue = 0f;
             slider.maxValue = 1f;
             slider.value = 0f;
+            slider.interactable = false;
+            slider.transition = Selectable.Transition.None;
 
-            GameObject bg = UIImage(barGo.transform, "Background", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 34f),
-                Color.white);
+            GameObject bg = UIImage(barGo.transform, "Background", new Vector2(0.5f, 0.5f), Vector2.zero, size, Color.white);
             StretchFull((RectTransform)bg.transform);
             Skin(bg, "progress_green_border", Color.white);
 
             GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
             fillArea.transform.SetParent(barGo.transform, false);
-            RectTransform fillAreaRect = (RectTransform)fillArea.transform;
-            StretchFull(fillAreaRect);
-            // Inset so the fill sits inside the frame rather than covering its edge.
-            fillAreaRect.offsetMin = new Vector2(6f, 6f);
-            fillAreaRect.offsetMax = new Vector2(-6f, -6f);
+            RectTransform fillRect = (RectTransform)fillArea.transform;
+            StretchFull(fillRect);
+            fillRect.offsetMin = new Vector2(7f, 7f);
+            fillRect.offsetMax = new Vector2(-7f, -7f);
 
-            GameObject fill = UIImage(fillArea.transform, "Fill", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(520f, 34f),
-                Color.white);
+            GameObject fill = UIImage(fillArea.transform, "Fill", new Vector2(0.5f, 0.5f), Vector2.zero, size, Color.white);
             StretchFull((RectTransform)fill.transform);
             Skin(fill, "progress_green", Color.white);
 
             slider.fillRect = (RectTransform)fill.transform;
             slider.targetGraphic = fill.GetComponent<Image>();
 
-            TMP_Text progressLabel = UIText(barGo.transform, "ProgressText", new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(200f, 34f), "0%", 26f, TextAlignmentOptions.Center);
-
-            TMP_Text questText = UIText(canvasGo.transform, "QuestText", new Vector2(0.5f, 1f), new Vector2(0f, -96f),
-                new Vector2(760f, 60f), "Pazari kur!", 40f, TextAlignmentOptions.Center);
-
-            GameObject settings = UIImage(canvasGo.transform, "SettingsButton", new Vector2(0f, 1f),
-                new Vector2(64f, -64f), new Vector2(100f, 100f), Color.white);
-            Skin(settings, "button_brown", Color.white);
-            // Hamburger drawn from plain bars — the gear glyph is not in the TMP font and
-            // rendered as a missing-character box.
-            for (int i = -1; i <= 1; i++)
-            {
-                UIImage(settings.transform, "Bar" + i, new Vector2(0.5f, 0.5f), new Vector2(0f, i * -18f),
-                    new Vector2(48f, 7f), new Color(0.32f, 0.24f, 0.16f, 1f));
-            }
-            Button settingsButton = settings.AddComponent<Button>();
-            settingsButton.targetGraphic = settings.GetComponent<Image>();
-
-            BuildSettingsPanel(canvasGo.transform, settingsButton);
-            BuildDailyQuestCard(canvasGo.transform);
-
-            // Bottom-right dump button — thumb-reachable on a phone, clickable on desktop.
-            GameObject trash = UIImage(canvasGo.transform, "TrashButton", new Vector2(1f, 0f),
-                new Vector2(-50f, 50f), new Vector2(140f, 140f), Color.white);
-            Skin(trash, "button_red", Color.white);
-            UIText(trash.transform, "Icon", new Vector2(0.5f, 0.5f), new Vector2(0f, 4f), new Vector2(126f, 126f),
-                "AT", 38f, TextAlignmentOptions.Center);
-
-            Button trashButton = trash.AddComponent<Button>();
-            trashButton.targetGraphic = trash.GetComponent<Image>();
-            trash.AddComponent<CanvasGroup>();
-            trash.AddComponent<TrashButton>();
-
-            // Touch zone covering the left half of the screen. It sits behind the buttons in
-            // sibling order so the trash button still wins a tap in the bottom-right.
-            GameObject stickZone = new GameObject("JoystickZone", typeof(RectTransform));
-            stickZone.transform.SetParent(canvasGo.transform, false);
-            stickZone.transform.SetAsFirstSibling();
-            RectTransform zoneRect = (RectTransform)stickZone.transform;
-            zoneRect.anchorMin = Vector2.zero;
-            zoneRect.anchorMax = new Vector2(0.6f, 1f);
-            zoneRect.offsetMin = Vector2.zero;
-            zoneRect.offsetMax = Vector2.zero;
-
-            Image zoneHit = stickZone.AddComponent<Image>();
-            zoneHit.color = new Color(0f, 0f, 0f, 0f); // invisible but raycastable
-
-            GameObject ring = UIImage(stickZone.transform, "Ring", new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(240f, 240f), new Color(1f, 1f, 1f, 0.25f));
-            GameObject knob = UIImage(stickZone.transform, "Knob", new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(110f, 110f), new Color(1f, 1f, 1f, 0.55f));
-            ring.GetComponent<Image>().raycastTarget = false;
-            knob.GetComponent<Image>().raycastTarget = false;
-
-            CanvasGroup stickGroup = stickZone.AddComponent<CanvasGroup>();
-            stickGroup.alpha = 0f;
-
-            VirtualJoystick joystick = stickZone.AddComponent<VirtualJoystick>();
-            SetPrivate(joystick, "ring", ring.GetComponent<RectTransform>());
-            SetPrivate(joystick, "knob", knob.GetComponent<RectTransform>());
-            SetPrivate(joystick, "group", stickGroup);
-
-            GameObject hudGo = new GameObject("HUDManager");
-            hudGo.transform.SetParent(canvasGo.transform, false);
-            HUDManager hud = hudGo.AddComponent<HUDManager>();
-            hud.Bind(goldText, questText, slider, progressLabel);
+            UIText(barGo.transform, "Value", new Vector2(0.5f, 0.5f), Vector2.zero, size, "", 24f,
+                TextAlignmentOptions.Center);
+            return slider;
         }
 
         /// <summary>Gear popup with music and SFX sliders, hidden until the gear is tapped.</summary>
         private static void BuildSettingsPanel(Transform canvas, Button openButton)
         {
             GameObject dim = UIImage(canvas, "SettingsPanel", new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(100f, 100f), new Color(0f, 0f, 0f, 0.55f));
+                new Vector2(100f, 100f), new Color(0f, 0f, 0f, 0.6f));
             StretchFull((RectTransform)dim.transform);
 
             GameObject card = UIImage(dim.transform, "Card", new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(640f, 460f), Color.white);
+                new Vector2(680f, 580f), Color.white);
             Skin(card, "panel_brown", Color.white);
 
-            UIText(card.transform, "Title", new Vector2(0.5f, 1f), new Vector2(0f, -46f),
-                new Vector2(520f, 70f), "AYARLAR", 46f, TextAlignmentOptions.Center);
+            UIText(card.transform, "Title", new Vector2(0.5f, 1f), new Vector2(0f, -56f),
+                new Vector2(560f, 70f), "AYARLAR", 48f, TextAlignmentOptions.Center);
 
-            Slider musicSlider = BuildLabelledSlider(card.transform, "Music", "MUZIK", new Vector2(0f, 24f));
-            Slider sfxSlider = BuildLabelledSlider(card.transform, "Sfx", "SES", new Vector2(0f, -96f));
+            Slider musicSlider = BuildLabelledSlider(card.transform, "Music", "MUZIK", new Vector2(0f, 92f));
+            Slider sfxSlider = BuildLabelledSlider(card.transform, "Sfx", "SES", new Vector2(0f, -34f));
 
             GameObject close = UIImage(card.transform, "CloseButton", new Vector2(0.5f, 0f),
-                new Vector2(0f, 62f), new Vector2(260f, 88f), Color.white);
+                new Vector2(0f, 62f), new Vector2(300f, 92f), Color.white);
             Skin(close, "button_red", Color.white);
             UIText(close.transform, "Label", new Vector2(0.5f, 0.5f), new Vector2(0f, 4f),
-                new Vector2(240f, 70f), "KAPAT", 38f, TextAlignmentOptions.Center);
+                new Vector2(280f, 70f), "KAPAT", 38f, TextAlignmentOptions.Center);
             Button closeButton = close.AddComponent<Button>();
             closeButton.targetGraphic = close.GetComponent<Image>();
 
@@ -1380,53 +1477,27 @@ namespace MayorOfMedieval.EditorUtils
 
         private static Slider BuildLabelledSlider(Transform parent, string name, string caption, Vector2 pos)
         {
-            UIText(parent, name + "Label", new Vector2(0.5f, 0.5f), pos + new Vector2(-210f, 46f),
-                new Vector2(240f, 50f), caption, 32f, TextAlignmentOptions.Left);
+            UIText(parent, name + "Label", new Vector2(0.5f, 0.5f), pos + new Vector2(-224f, 48f),
+                new Vector2(240f, 50f), caption, 30f, TextAlignmentOptions.Left);
 
-            GameObject barGo = new GameObject(name + "Slider", typeof(RectTransform));
-            barGo.transform.SetParent(parent, false);
-            RectTransform rect = (RectTransform)barGo.transform;
-            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(500f, 44f);
-            rect.anchoredPosition = pos;
-
-            Slider slider = barGo.AddComponent<Slider>();
-            slider.minValue = 0f;
-            slider.maxValue = 1f;
-            slider.transition = Selectable.Transition.None;
-
-            GameObject bg = UIImage(barGo.transform, "Background", new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(500f, 44f), Color.white);
-            StretchFull((RectTransform)bg.transform);
-            Skin(bg, "progress_green_border", Color.white);
-
-            GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
-            fillArea.transform.SetParent(barGo.transform, false);
-            RectTransform fillAreaRect = (RectTransform)fillArea.transform;
-            StretchFull(fillAreaRect);
-            fillAreaRect.offsetMin = new Vector2(8f, 8f);
-            fillAreaRect.offsetMax = new Vector2(-8f, -8f);
-
-            GameObject fill = UIImage(fillArea.transform, "Fill", new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(500f, 44f), Color.white);
-            StretchFull((RectTransform)fill.transform);
-            Skin(fill, "progress_green", Color.white);
-
-            slider.fillRect = (RectTransform)fill.transform;
-            slider.targetGraphic = fill.GetComponent<Image>();
+            Slider slider = BuildBar(parent, name + "Slider", new Vector2(0.5f, 0.5f), pos, new Vector2(520f, 46f));
+            slider.interactable = true;
             return slider;
         }
 
-        /// <summary>Daily-task card under the quest banner, mirroring the reference layout.</summary>
+        /// <summary>Daily-task card down the left edge, under the level badge area.</summary>
         private static void BuildDailyQuestCard(Transform canvas)
         {
-            GameObject card = UIImage(canvas, "DailyCard", new Vector2(0f, 1f), new Vector2(30f, -190f),
-                new Vector2(440f, 240f), Color.white);
-            // Darkened so the light task text stays legible on top of it.
+            GameObject card = UIImage(canvas, "DailyCard", new Vector2(0f, 1f),
+                new Vector2(Margin, -(Margin + CircleSize + 56f)), new Vector2(430f, 250f), Color.white);
             Skin(card, "panel_brown_dark", Color.white);
 
-            UIText(card.transform, "Title", new Vector2(0.5f, 1f), new Vector2(0f, -34f),
-                new Vector2(400f, 46f), "GUNLUK GOREVLER", 26f, TextAlignmentOptions.Center);
+            GameObject badge = UICircle(card.transform, "Badge", new Vector2(0f, 1f), new Vector2(16f, -14f), 66f, "round_brown");
+            UIImage(badge.transform, "Glyph", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(30f, 30f),
+                new Color(0.95f, 0.83f, 0.3f));
+
+            UIText(card.transform, "Title", new Vector2(0f, 1f), new Vector2(92f, -30f),
+                new Vector2(320f, 44f), "GUNLUK GOREVLER", 26f, TextAlignmentOptions.Left);
 
             DailyQuestCard view = card.AddComponent<DailyQuestCard>();
 
@@ -1434,10 +1505,10 @@ namespace MayorOfMedieval.EditorUtils
             List<Slider> rowBars = new List<Slider>();
             for (int i = 0; i < 3; i++)
             {
-                float y = -70f - i * 44f;
-                rowTexts.Add(UIText(card.transform, "Row" + i, new Vector2(0.5f, 1f), new Vector2(-6f, y),
-                    new Vector2(380f, 34f), "-", 22f, TextAlignmentOptions.Left));
-                rowBars.Add(BuildThinBar(card.transform, "Bar" + i, new Vector2(0f, y - 22f)));
+                float y = -96f - i * 50f;
+                rowTexts.Add(UIText(card.transform, "Row" + i, new Vector2(0f, 1f), new Vector2(24f, y),
+                    new Vector2(390f, 32f), "-", 22f, TextAlignmentOptions.Left));
+                rowBars.Add(BuildThinBar(card.transform, "Bar" + i, new Vector2(24f, y - 26f)));
             }
             SetPrivate(view, "rows", rowTexts);
             SetPrivate(view, "bars", rowBars);
@@ -1448,9 +1519,8 @@ namespace MayorOfMedieval.EditorUtils
             GameObject barGo = new GameObject(name, typeof(RectTransform));
             barGo.transform.SetParent(parent, false);
             RectTransform rect = (RectTransform)barGo.transform;
-            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
-            rect.pivot = new Vector2(0.5f, 1f);
-            rect.sizeDelta = new Vector2(370f, 12f);
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0f, 1f);
+            rect.sizeDelta = new Vector2(382f, 14f);
             rect.anchoredPosition = pos;
 
             Slider slider = barGo.AddComponent<Slider>();
@@ -1460,7 +1530,7 @@ namespace MayorOfMedieval.EditorUtils
             slider.transition = Selectable.Transition.None;
 
             GameObject bg = UIImage(barGo.transform, "Background", new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(370f, 12f), new Color(0.2f, 0.18f, 0.16f, 0.9f));
+                new Vector2(382f, 14f), new Color(0.16f, 0.13f, 0.11f, 0.95f));
             StretchFull((RectTransform)bg.transform);
 
             GameObject fillArea = new GameObject("Fill Area", typeof(RectTransform));
@@ -1468,7 +1538,7 @@ namespace MayorOfMedieval.EditorUtils
             StretchFull((RectTransform)fillArea.transform);
 
             GameObject fill = UIImage(fillArea.transform, "Fill", new Vector2(0.5f, 0.5f), Vector2.zero,
-                new Vector2(370f, 12f), new Color(0.38f, 0.85f, 0.42f));
+                new Vector2(382f, 14f), new Color(0.42f, 0.88f, 0.46f));
             StretchFull((RectTransform)fill.transform);
 
             slider.fillRect = (RectTransform)fill.transform;
