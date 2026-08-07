@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using MayorOfMedieval.Building;
+using MayorOfMedieval.Core;
 using MayorOfMedieval.Economy;
 using UnityEngine;
 
@@ -91,9 +92,14 @@ namespace MayorOfMedieval.NPC
         private void BuildPool(ServiceCounter counter)
         {
             pool.Clear();
+            GameProgression progression = GameProgression.Instance;
+
             for (int i = 0; i < counter.AcceptedGoods.Count; i++)
             {
-                pool.Add(counter.AcceptedGoods[i]);
+                ResourceType good = counter.AcceptedGoods[i];
+                // Only ask for goods the village can actually produce right now.
+                if (progression != null && !progression.IsGoodUnlocked(good)) continue;
+                pool.Add(good);
             }
         }
     }

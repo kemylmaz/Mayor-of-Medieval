@@ -156,6 +156,25 @@ namespace MayorOfMedieval.Core
 
         public bool IsBuilt(BuildingKind kind) => built.Contains(kind);
 
+        /// <summary>
+        /// Whether a customer may ask for this good yet. Wood and stone can be gathered by
+        /// hand from the first second, but everything else needs its production building
+        /// standing — otherwise the Market would take bread orders the player has no way
+        /// to fill, which reads as the game being broken.
+        /// </summary>
+        public bool IsGoodUnlocked(ResourceType type)
+        {
+            switch (type)
+            {
+                case ResourceType.Meat: return IsBuilt(BuildingKind.Farm);
+                case ResourceType.Grain: return IsBuilt(BuildingKind.CropField);
+                case ResourceType.Bread: return IsBuilt(BuildingKind.Mill);
+                case ResourceType.Sword: return IsBuilt(BuildingKind.Blacksmith);
+                case ResourceType.Beer: return IsBuilt(BuildingKind.Inn);
+                default: return true;
+            }
+        }
+
         public void NotifyBuilt(BuildingKind kind)
         {
             if (!built.Add(kind)) return;
