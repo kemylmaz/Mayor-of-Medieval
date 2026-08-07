@@ -51,7 +51,18 @@ namespace MayorOfMedieval.Character
             float horizontal = Input.GetAxisRaw("Horizontal");
             float vertical = Input.GetAxisRaw("Vertical");
 
-            Vector3 input = new Vector3(horizontal, 0f, vertical).normalized;
+            // On phones there is no keyboard, so the on-screen stick supplies the axes.
+            // Whichever input is actually being used wins; they never fight because the
+            // stick reads zero unless a thumb is on it.
+            UI.VirtualJoystick stick = UI.VirtualJoystick.Instance;
+            if (stick != null && stick.IsHeld)
+            {
+                horizontal = stick.Direction.x;
+                vertical = stick.Direction.y;
+            }
+
+            Vector3 input = new Vector3(horizontal, 0f, vertical);
+            if (input.sqrMagnitude > 1f) input.Normalize();
 
             if (input.magnitude >= 0.1f)
             {

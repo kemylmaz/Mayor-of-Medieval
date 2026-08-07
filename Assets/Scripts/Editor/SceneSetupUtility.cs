@@ -525,21 +525,34 @@ namespace MayorOfMedieval.EditorUtils
 
         private static GameObject BuildMarket(Materials m)
         {
-            GameObject root = BuildHut("Market", m, new Vector3(3f, 1.5f, 2f));
-            // Kenney ships a finished market stall — put a row of them along the shop front.
-            Piece("FantasyTown/stall-red", root.transform, new Vector3(-1f, 0f, -1.6f), 180f);
-            Piece("FantasyTown/stall-green", root.transform, new Vector3(0f, 0f, -1.6f), 180f);
-            Piece("FantasyTown/stall-red", root.transform, new Vector3(1f, 0f, -1.6f), 180f);
-            Piece("FantasyTown/stall-stool", root.transform, new Vector3(1.8f, 0f, -1.1f));
+            GameObject root = BuildHut("Market", m, new Vector3(5f, 1.5f, 3f));
+            for (int i = -2; i <= 2; i++)
+            {
+                Piece(i % 2 == 0 ? "FantasyTown/stall-red" : "FantasyTown/stall-green",
+                    root.transform, new Vector3(i, 0f, -2.6f), 180f);
+            }
+            Piece("FantasyTown/stall-stool", root.transform, new Vector3(3.1f, 0f, -2.1f));
 
-            // Shelves the Lord (or a Carrier) stocks; customers help themselves.
-            Stockpile woodShelf = AddStockpile(root, "WoodShelf", new Vector3(-1.6f, 0f, -1.2f), ResourceType.Wood, 12, false, true);
-            Stockpile stoneShelf = AddStockpile(root, "StoneShelf", new Vector3(1.6f, 0f, -1.2f), ResourceType.Stone, 12, false, true);
+            // The Market is the village's only shop: every good in the game is sold here.
+            // Production buildings just stockpile and their Carriers haul goods over. When
+            // a building sold its own output, its carrier moved goods from its own pile to
+            // its own shelf — a pointless round trip that never reached a customer.
+            ResourceType[] goods =
+            {
+                ResourceType.Wood, ResourceType.Stone, ResourceType.Meat,
+                ResourceType.Grain, ResourceType.Bread, ResourceType.Sword, ResourceType.Beer
+            };
 
-            // Till sits beside the stalls on the customer side, not round the back.
-            AddSalesPoint(root, new Vector3(3.0f, 0f, -1.8f), woodShelf, stoneShelf);
-            AddCounter(root, new Vector3(0f, 0f, -2.4f), ResourceType.Wood, ResourceType.Stone);
-            Label(root.transform, new Vector3(0f, 2.5f, 0f), "PAZAR", 4f);
+            List<Stockpile> shelves = new List<Stockpile>();
+            for (int i = 0; i < goods.Length; i++)
+            {
+                shelves.Add(AddStockpile(root, goods[i] + "Shelf",
+                    new Vector3(-3f + i, 0f, -2.0f), goods[i], 10, false, true));
+            }
+
+            AddSalesPoint(root, new Vector3(4.8f, 0f, -2.4f), shelves.ToArray());
+            AddCounter(root, new Vector3(0f, 0f, -3.6f), goods);
+            Label(root.transform, new Vector3(0f, 4.6f, 0f), "PAZAR", 4f);
             return root;
         }
 
@@ -556,7 +569,7 @@ namespace MayorOfMedieval.EditorUtils
                 new[] { WorkerRole.Harvester, WorkerRole.Carrier },
                 type, pile, new Vector3(2.2f, 0f, 0f));
 
-            Label(root.transform, new Vector3(0f, 2.4f, 0f), caption, 3.5f);
+            Label(root.transform, new Vector3(0f, 4.4f, 0f), caption, 3.5f);
             return root;
         }
 
@@ -565,15 +578,10 @@ namespace MayorOfMedieval.EditorUtils
             GameObject root = BuildHut("Farm", m, new Vector3(2.8f, 1.5f, 2.4f));
 
             Stockpile pile = AddStockpile(root, "MeatPile", new Vector3(-2.3f, 0f, 0f), ResourceType.Meat, 16, true, false, true);
-            Stockpile shelf = AddStockpile(root, "MeatShelf", new Vector3(0f, 0f, -1.5f), ResourceType.Meat, 12, false, true);
-
-            AddSalesPoint(root, new Vector3(3.2f, 0f, -2.0f), shelf);
             AddStation(root, workerPrefab,
                 new[] { WorkerRole.Harvester, WorkerRole.Carrier },
                 ResourceType.Meat, pile, new Vector3(2.6f, 0f, 0f));
 
-            AddCounter(root, new Vector3(0f, 0f, -2.6f), ResourceType.Meat);
-            Label(root.transform, new Vector3(0f, 2.5f, 0f), "CIFTLIK", 3.5f);
             return root;
         }
 
@@ -597,16 +605,13 @@ namespace MayorOfMedieval.EditorUtils
 
             // Reserve keeps the Mill and Inn supplied before grain goes to the shelf.
             Stockpile pile = AddStockpile(root, "GrainPile", new Vector3(-3.2f, 0f, 0f), ResourceType.Grain, 24, true, false, true, 8);
-            Stockpile shelf = AddStockpile(root, "GrainShelf", new Vector3(0f, 0f, -2.4f), ResourceType.Grain, 12, false, true);
 
             CropField field = root.AddComponent<CropField>();
             SetPrivate(field, "output", pile);
             SetPrivate(field, "dryOverlay", dry);
             SetPrivate(field, "cropVisuals", crops.ToArray());
 
-            AddSalesPoint(root, new Vector3(3.4f, 0f, -2.6f), shelf);
-            AddCounter(root, new Vector3(0f, 0f, -3.4f), ResourceType.Grain);
-            Label(root.transform, new Vector3(0f, 2f, 0f), "TARLA", 3.5f);
+            Label(root.transform, new Vector3(0f, 2.6f, 0f), "TARLA", 3.5f);
             return root;
         }
 
@@ -630,7 +635,7 @@ namespace MayorOfMedieval.EditorUtils
             WaterWell well = root.AddComponent<WaterWell>();
             SetPrivate(well, "waterPile", buckets);
 
-            Label(root.transform, new Vector3(0f, 2.6f, 0f), "KUYU", 3.5f);
+            Label(root.transform, new Vector3(0f, 3.2f, 0f), "KUYU", 3.5f);
             return root;
         }
 
@@ -656,19 +661,16 @@ namespace MayorOfMedieval.EditorUtils
             Stockpile waterIn = AddStockpile(root, "WaterInput", new Vector3(-2.6f, 0f, 0.4f), ResourceType.Water, 16, false, true);
             // Reserve feeds the Inn's brewer before bread is sent to the shelf.
             Stockpile breadOut = AddStockpile(root, "BreadOutput", new Vector3(-2.6f, 0f, -2.2f), ResourceType.Bread, 16, true, false, true, 5);
-            Stockpile shelf = AddStockpile(root, "BreadShelf", new Vector3(0f, 0f, -2.0f), ResourceType.Bread, 12, false, true);
 
             ProductionBuilding mill = root.AddComponent<ProductionBuilding>();
             SetIngredients(mill, new[] { grainIn, waterIn });
             SetPrivate(mill, "output", breadOut);
             SetPrivate(mill, "spinner", sails.transform);
 
-            AddSalesPoint(root, new Vector3(3.0f, 0f, -2.4f), shelf);
             AddStation(root, workerPrefab, new[] { WorkerRole.Producer, WorkerRole.Carrier },
                 ResourceType.Bread, breadOut, new Vector3(2.4f, 0f, 1.8f), mill);
 
-            AddCounter(root, new Vector3(0f, 0f, -3.0f), ResourceType.Bread);
-            Label(root.transform, new Vector3(0f, 3.7f, 0f), "DEGIRMEN", 3.5f);
+            Label(root.transform, new Vector3(0f, 5.2f, 0f), "DEGIRMEN", 3.5f);
             return root;
         }
 
@@ -683,7 +685,7 @@ namespace MayorOfMedieval.EditorUtils
                 new[] { WorkerRole.GoldCollector, WorkerRole.GoldCollector },
                 ResourceType.Gold, null, new Vector3(2.4f, 0f, 0f));
 
-            Label(root.transform, new Vector3(0f, 3f, 0f), "HAZINE", 3.5f);
+            Label(root.transform, new Vector3(0f, 4.6f, 0f), "HAZINE", 3.5f);
             return root;
         }
 
@@ -697,7 +699,6 @@ namespace MayorOfMedieval.EditorUtils
             Stockpile stoneIn = AddStockpile(root, "StoneInput", new Vector3(-2.4f, 0f, 1.4f), ResourceType.Stone, 16, false, true);
             // Reserve keeps the Barracks mustering even while swords are also being sold.
             Stockpile swordOut = AddStockpile(root, "SwordOutput", new Vector3(-2.4f, 0f, -1.4f), ResourceType.Sword, 16, true, false, true, 5);
-            Stockpile shelf = AddStockpile(root, "SwordShelf", new Vector3(0f, 0f, -1.0f), ResourceType.Sword, 10, false, true);
 
             ProductionBuilding forge = root.AddComponent<ProductionBuilding>();
             SetIngredients(forge, new[] { stoneIn });
@@ -706,12 +707,10 @@ namespace MayorOfMedieval.EditorUtils
             SetPrivate(forge, "spinSpeed", 0f);
             SetPrivate(forge, "secondsPerCraft", 2.2f);
 
-            AddSalesPoint(root, new Vector3(3.0f, 0f, -2.2f), shelf);
             AddStation(root, workerPrefab, new[] { WorkerRole.Producer, WorkerRole.Carrier },
                 ResourceType.Sword, swordOut, new Vector3(2.4f, 0f, 1.6f), forge);
 
-            AddCounter(root, new Vector3(0f, 0f, -2.6f), ResourceType.Sword);
-            Label(root.transform, new Vector3(0f, 2.7f, 0f), "DEMIRCI", 3.5f);
+            Label(root.transform, new Vector3(0f, 4.6f, 0f), "DEMIRCI", 3.5f);
             return root;
         }
 
@@ -740,7 +739,7 @@ namespace MayorOfMedieval.EditorUtils
             AddStation(root, workerPrefab, new[] { WorkerRole.Producer },
                 ResourceType.Sword, swordIn, new Vector3(2.8f, 0f, 0f), feeder);
 
-            Label(root.transform, new Vector3(0f, 3f, 0f), "KISLA", 3.5f);
+            Label(root.transform, new Vector3(0f, 5.0f, 0f), "KISLA", 3.5f);
             return root;
         }
 
@@ -753,19 +752,16 @@ namespace MayorOfMedieval.EditorUtils
             Stockpile waterIn = AddStockpile(root, "WaterInput", new Vector3(-2.8f, 0f, 0.6f), ResourceType.Water, 14, false, true);
             Stockpile breadIn = AddStockpile(root, "BreadInput", new Vector3(-2.8f, 0f, -0.8f), ResourceType.Bread, 14, false, true);
             Stockpile beerOut = AddStockpile(root, "BeerOutput", new Vector3(-2.8f, 0f, -2.4f), ResourceType.Beer, 14, true, false, true);
-            Stockpile shelf = AddStockpile(root, "BeerShelf", new Vector3(0f, 0f, -1.6f), ResourceType.Beer, 12, false, true);
 
             ProductionBuilding brewery = root.AddComponent<ProductionBuilding>();
             SetIngredients(brewery, new[] { grainIn, waterIn, breadIn });
             SetPrivate(brewery, "output", beerOut);
             SetPrivate(brewery, "secondsPerCraft", 4f);
 
-            AddSalesPoint(root, new Vector3(3.2f, 0f, -2.4f), shelf);
             AddStation(root, workerPrefab, new[] { WorkerRole.Producer, WorkerRole.Carrier },
                 ResourceType.Beer, beerOut, new Vector3(2.6f, 0f, 1.8f), brewery);
 
-            AddCounter(root, new Vector3(0f, 0f, -2.8f), ResourceType.Beer);
-            Label(root.transform, new Vector3(0f, 3.1f, 0f), "HAN", 3.5f);
+            Label(root.transform, new Vector3(0f, 5.0f, 0f), "HAN", 3.5f);
             return root;
         }
 
@@ -825,6 +821,10 @@ namespace MayorOfMedieval.EditorUtils
 
             if (gm.GetComponent<GameProgression>() == null) gm.AddComponent<GameProgression>();
             if (gm.GetComponent<SaveManager>() == null) gm.AddComponent<SaveManager>();
+
+            RoadNetwork roads = gm.GetComponent<RoadNetwork>();
+            if (roads == null) roads = gm.AddComponent<RoadNetwork>();
+            SetPrivate(roads, "roadPiece", Model("FantasyTown/road"));
         }
 
         private static void SetupPlayer(Materials m)
@@ -975,27 +975,36 @@ namespace MayorOfMedieval.EditorUtils
             GameObject pads = new GameObject("BuildPads");
             pads.transform.SetParent(root, false);
 
-            // Compact village so the close camera always frames something interesting.
-            // The Market sits right in front of the spawn (first objective), production
-            // buildings ring it within a short walk, and each processing chain is grouped
-            // with its supplier: Field next to Well, Mill next to both, Blacksmith beside
-            // the Quarry it eats from, Barracks behind the Blacksmith.
-            MakePad(pads.transform, m, BuildingKind.Market, prefabs.Market, new Vector3(0f, 0f, -6f));
+            // The village is a wheel: the plaza is the hub, the Market sits just south of
+            // it (the very first objective, right where the player spawns), and the ten
+            // remaining buildings are spaced evenly around a ring so the town reads as
+            // deliberately planned rather than scattered.
+            MakePad(pads.transform, m, BuildingKind.VillageSquare, prefabs.VillageSquare, Vector3.zero);
+            MakePad(pads.transform, m, BuildingKind.Market, prefabs.Market, new Vector3(0f, 0f, -7f));
 
-            MakePad(pads.transform, m, BuildingKind.LumberCamp, prefabs.LumberCamp, new Vector3(-7f, 0f, 1f));
-            MakePad(pads.transform, m, BuildingKind.Quarry, prefabs.Quarry, new Vector3(-8f, 0f, -7f));
-            MakePad(pads.transform, m, BuildingKind.Blacksmith, prefabs.Blacksmith, new Vector3(-14f, 0f, -4f));
-            MakePad(pads.transform, m, BuildingKind.Barracks, prefabs.Barracks, new Vector3(-15f, 0f, -11f));
+            BuildingKind[] ring =
+            {
+                BuildingKind.LumberCamp, BuildingKind.Quarry, BuildingKind.Blacksmith,
+                BuildingKind.Barracks,   BuildingKind.Church, BuildingKind.Treasury,
+                BuildingKind.Mill,       BuildingKind.Inn,    BuildingKind.CropField,
+                BuildingKind.Well,       BuildingKind.Farm
+            };
+            GameObject[] ringPrefabs =
+            {
+                prefabs.LumberCamp, prefabs.Quarry, prefabs.Blacksmith,
+                prefabs.Barracks,   prefabs.Church, prefabs.Treasury,
+                prefabs.Mill,       prefabs.Inn,    prefabs.CropField,
+                prefabs.Well,       prefabs.Farm
+            };
 
-            MakePad(pads.transform, m, BuildingKind.Farm, prefabs.Farm, new Vector3(8f, 0f, -7f));
-            MakePad(pads.transform, m, BuildingKind.CropField, prefabs.CropField, new Vector3(9f, 0f, 2f));
-            MakePad(pads.transform, m, BuildingKind.Well, prefabs.Well, new Vector3(13f, 0f, -2f));
-            MakePad(pads.transform, m, BuildingKind.Mill, prefabs.Mill, new Vector3(6f, 0f, 8f));
-            MakePad(pads.transform, m, BuildingKind.Inn, prefabs.Inn, new Vector3(12f, 0f, 8f));
-
-            MakePad(pads.transform, m, BuildingKind.Treasury, prefabs.Treasury, new Vector3(-6f, 0f, 7f));
-            MakePad(pads.transform, m, BuildingKind.VillageSquare, prefabs.VillageSquare, new Vector3(0f, 0f, 5f));
-            MakePad(pads.transform, m, BuildingKind.Church, prefabs.Church, new Vector3(-1f, 0f, 12f));
+            const float ringRadius = 13f;
+            for (int i = 0; i < ring.Length; i++)
+            {
+                // Start just past the Market and sweep the rest of the circle evenly.
+                float angle = Mathf.PI * (0.5f + (i + 1) / (float)(ring.Length + 1) * 2f);
+                Vector3 spot = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * ringRadius;
+                MakePad(pads.transform, m, ring[i], ringPrefabs[i], spot);
+            }
 
             SetupTrainingGround(root, prefabs);
         }
@@ -1034,6 +1043,9 @@ namespace MayorOfMedieval.EditorUtils
             Cube("Head", arrow.transform, Vector3.zero, new Vector3(0.38f, 0.38f, 0.38f), m.Pad).transform.localRotation
                 = Quaternion.Euler(0f, 45f, 45f);
 
+            // Name above the price so the player knows what they are paying for before
+            // they commit — a bare number gives no idea what is about to be built.
+            Label(visual.transform, new Vector3(0f, 1.15f, -0.05f), GameConfig.DisplayName(kind).ToUpperInvariant(), 3.4f);
             TextMeshPro label = Label(visual.transform, new Vector3(0f, 0.62f, -0.05f), GameConfig.CostOf(kind).ToString(), 5f);
 
             BuildPad component = pad.AddComponent<BuildPad>();
@@ -1169,6 +1181,35 @@ namespace MayorOfMedieval.EditorUtils
             trashButton.targetGraphic = trash.GetComponent<Image>();
             trash.AddComponent<CanvasGroup>();
             trash.AddComponent<TrashButton>();
+
+            // Touch zone covering the left half of the screen. It sits behind the buttons in
+            // sibling order so the trash button still wins a tap in the bottom-right.
+            GameObject stickZone = new GameObject("JoystickZone", typeof(RectTransform));
+            stickZone.transform.SetParent(canvasGo.transform, false);
+            stickZone.transform.SetAsFirstSibling();
+            RectTransform zoneRect = (RectTransform)stickZone.transform;
+            zoneRect.anchorMin = Vector2.zero;
+            zoneRect.anchorMax = new Vector2(0.6f, 1f);
+            zoneRect.offsetMin = Vector2.zero;
+            zoneRect.offsetMax = Vector2.zero;
+
+            Image zoneHit = stickZone.AddComponent<Image>();
+            zoneHit.color = new Color(0f, 0f, 0f, 0f); // invisible but raycastable
+
+            GameObject ring = UIImage(stickZone.transform, "Ring", new Vector2(0.5f, 0.5f), Vector2.zero,
+                new Vector2(240f, 240f), new Color(1f, 1f, 1f, 0.25f));
+            GameObject knob = UIImage(stickZone.transform, "Knob", new Vector2(0.5f, 0.5f), Vector2.zero,
+                new Vector2(110f, 110f), new Color(1f, 1f, 1f, 0.55f));
+            ring.GetComponent<Image>().raycastTarget = false;
+            knob.GetComponent<Image>().raycastTarget = false;
+
+            CanvasGroup stickGroup = stickZone.AddComponent<CanvasGroup>();
+            stickGroup.alpha = 0f;
+
+            VirtualJoystick joystick = stickZone.AddComponent<VirtualJoystick>();
+            SetPrivate(joystick, "ring", ring.GetComponent<RectTransform>());
+            SetPrivate(joystick, "knob", knob.GetComponent<RectTransform>());
+            SetPrivate(joystick, "group", stickGroup);
 
             GameObject hudGo = new GameObject("HUDManager");
             hudGo.transform.SetParent(canvasGo.transform, false);

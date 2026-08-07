@@ -42,9 +42,9 @@ namespace MayorOfMedieval.Core
         public const int WorkerCarryCapacity = 4;
 
         // --- Hiring -------------------------------------------------------------
-        // Deliberately steep: the first hire is an investment, the second is a commitment.
-        public const int BaseWorkerCost = 150;
-        public const int WorkerCostIncrement = 150;
+        // Tuned for a playable-ad pace: a hire is a quick decision, not a long save-up.
+        public const int BaseWorkerCost = 70;
+        public const int WorkerCostIncrement = 60;
 
         public static int WorkerCostFor(int alreadyHired) =>
             BaseWorkerCost + alreadyHired * WorkerCostIncrement;
@@ -55,19 +55,21 @@ namespace MayorOfMedieval.Core
         {
             switch (kind)
             {
-                case BuildingKind.Market: return 100;
-                case BuildingKind.LumberCamp: return 150;
-                case BuildingKind.Quarry: return 200;
-                case BuildingKind.Farm: return 300;
-                case BuildingKind.CropField: return 400;
+                // Whole ladder is deliberately shallow so a 60-second session can reach
+                // the late buildings — a playable has to show its whole arc, fast.
+                case BuildingKind.Market: return 50;
+                case BuildingKind.LumberCamp: return 100;
+                case BuildingKind.Quarry: return 150;
+                case BuildingKind.Farm: return 250;
+                case BuildingKind.CropField: return 350;
                 case BuildingKind.Well: return 100;
-                case BuildingKind.Mill: return 1000;
-                case BuildingKind.Treasury: return 1200;
-                case BuildingKind.Blacksmith: return 1500;
-                case BuildingKind.Barracks: return 2500;
-                case BuildingKind.Inn: return 3000;
-                case BuildingKind.VillageSquare: return 3500;
-                case BuildingKind.Church: return 4500;
+                case BuildingKind.Mill: return 500;
+                case BuildingKind.Treasury: return 600;
+                case BuildingKind.Blacksmith: return 750;
+                case BuildingKind.Barracks: return 900;
+                case BuildingKind.Inn: return 1100;
+                case BuildingKind.VillageSquare: return 1300;
+                case BuildingKind.Church: return 1500;
                 default: return 100;
             }
         }
@@ -99,13 +101,13 @@ namespace MayorOfMedieval.Core
         {
             switch (type)
             {
-                case ResourceType.Wood: return 8;
-                case ResourceType.Stone: return 10;
-                case ResourceType.Grain: return 18;
-                case ResourceType.Meat: return 25;
-                case ResourceType.Bread: return 40;
-                case ResourceType.Beer: return 60;
-                case ResourceType.Sword: return 90;
+                case ResourceType.Wood: return 14;
+                case ResourceType.Stone: return 18;
+                case ResourceType.Grain: return 28;
+                case ResourceType.Meat: return 38;
+                case ResourceType.Bread: return 60;
+                case ResourceType.Beer: return 85;
+                case ResourceType.Sword: return 120;
                 default: return 0;
             }
         }

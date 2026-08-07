@@ -186,10 +186,25 @@ namespace MayorOfMedieval.Building
             padArrow.localPosition = arrowBase + Vector3.up * bounce;
         }
 
+        /// <summary>Human-readable job title for the hire that is currently on offer.</summary>
+        private string NextRoleName()
+        {
+            if (hireOrder == null || hireOrder.Length == 0) return "ISCI";
+            switch (hireOrder[Mathf.Clamp(WorkerCount, 0, hireOrder.Length - 1)])
+            {
+                case WorkerRole.Carrier: return "TASIYICI";
+                case WorkerRole.Producer: return "USTA";
+                case WorkerRole.GoldCollector: return "TAHSILDAR";
+                default: return "ISCI";
+            }
+        }
+
         private void RefreshPad()
         {
             if (padLabel == null) return;
-            padLabel.SetText(IsFullyStaffed ? "DOLU" : remainingCost.ToString());
+            // Show the job, not just a price — hiring a hauler and hiring a woodcutter
+            // cost the same but do completely different things.
+            padLabel.SetText(IsFullyStaffed ? "DOLU" : NextRoleName() + "\n" + remainingCost);
         }
 
         private void OnDrawGizmosSelected()
