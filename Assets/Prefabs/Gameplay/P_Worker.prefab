@@ -349,8 +349,8 @@ GameObject:
   m_Component:
   - component: {fileID: 2648017470645738248}
   - component: {fileID: 6129395791916550660}
-  - component: {fileID: 7858699743378279157}
   - component: {fileID: 7751183376847666858}
+  - component: {fileID: 244265146628755734}
   m_Layer: 0
   m_Name: P_Worker
   m_TagString: Untagged
@@ -391,18 +391,6 @@ MonoBehaviour:
   stackStep: 0.28
   itemScale: {x: 0.42, y: 0.24, z: 0.42}
   settleSpeed: 14
---- !u!114 &7858699743378279157
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3448728260073372457}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 0}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Environment.CarrierBeacon
 --- !u!114 &7751183376847666858
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -421,6 +409,18 @@ MonoBehaviour:
   depositDistance: 1.6
   searchInterval: 0.6
   transferInterval: 0.15
+--- !u!114 &244265146628755734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3448728260073372457}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MayorOfMedieval.Environment.CarrierBeacon
 --- !u!1 &5264725737847966847
 GameObject:
   m_ObjectHideFlags: 0
